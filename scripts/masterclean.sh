@@ -361,6 +361,10 @@ module.exports = {
       instances: 2,
       exec_mode: 'cluster',
       env_file: '/opt/legislativo/apps/api/.env',
+      env: {
+        // NODE_PATH permite que o Node.js encontre módulos do pnpm workspace
+        NODE_PATH: '/opt/legislativo/apps/api/node_modules:/opt/legislativo/node_modules',
+      },
       error_file: '/var/log/legislativo/api-error.log',
       out_file: '/var/log/legislativo/api-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
