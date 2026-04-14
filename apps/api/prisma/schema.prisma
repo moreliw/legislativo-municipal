@@ -1,0 +1,779 @@
+// Prisma Schema — Sistema Legislativo Municipal
+// Versão 1.0
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// CORE — Casa Legislativa e Estrutura Organizacional
+// ============================================================
+
+model CasaLegislativa {
+  id           String   @id @default(cuid())
+  nome         String
+  sigla        String   @unique
+  cnpj         String   @unique
+  municipio    String
+  uf           String
+  logo         String?
+  site         String?
+  email        String?
+  telefone     String?
+  configuracoes Json    @default("{}")
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  orgaos       Orgao[]
+  usuarios     Usuario[]
+  tiposMateria TipoMateria[]
+  calendarios  CalendarioLegislativo[]
+  sessoes      SessaoLegislativa[]
+
+  @@map("casas_legislativas")
+}
+
+model Orgao {
+  id            String   @id @default(cuid())
+  casaId        String
+  nome          String
+  sigla         String
+  tipo          TipoOrgao
+  descricao     String?
+  ativo         Boolean  @default(true)
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  casa          CasaLegislativa @relation(fields: [casaId], references: [id])
+  usuarios      UsuarioOrgao[]
+  proposicoes   Proposicao[]    @relation("OrgaoDestino")
+  tramitacoes   TramitacaoEvento[]
+
+  @@unique([casaId, sigla])
+  @@map("orgaos")
+}
+
+enum TipoOrgao {
+  PLENARIO
+  COMISSAO_PERMANENTE
+  COMISSAO_ESPECIAL
+  COMISSAO_PARLAMENTAR_INQUERITO
+  MESA_DIRETORA
+  PRESIDENCIA
+  SECRETARIA
+  PROTOCOLO
+  PROCURADORIA
+  CONTROLADORIA
+  PUBLICACAO
+}
+
+// ============================================================
+// USUÁRIOS E PERMISSÕES
+// ============================================================
+
+model Usuario {
+  id           String   @id @default(cuid())
+  casaId       String
+  keycloakId   String   @unique
+  nome         String
+  email        String
+  cpf          String?  @unique
+  matricula    String?
+  cargo        String?
+  avatar       String?
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  casa           CasaLegislativa     @relation(fields: [casaId], references: [id])
+  orgaos         UsuarioOrgao[]
+  perfis         UsuarioPerfil[]
+  proposicoesCriadas Proposicao[]    @relation("AutorProposicao")
+  eventosGerados TramitacaoEvento[]
+  assinaturas    AssinaturaDocumento[]
+  notificacoes   Notificacao[]
+  logsAuditoria  AuditoriaLog[]
+
+  @@map("usuarios")
+}
+
+model UsuarioOrgao {
+  id       String   @id @default(cuid())
+  usuarioId String
+  orgaoId   String
+  cargo     String?
+  principal Boolean @default(false)
+
+  usuario  Usuario @relation(fields: [usuarioId], references: [id])
+  orgao    Orgao   @relation(fields: [orgaoId], references: [id])
+
+  @@unique([usuarioId, orgaoId])
+  @@map("usuarios_orgaos")
+}
+
+model Perfil {
+  id           String   @id @default(cuid())
+  nome         String   @unique
+  descricao    String?
+  permissoes   String[] // array de strings "modulo:acao"
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  usuarios     UsuarioPerfil[]
+
+  @@map("perfis")
+}
+
+model UsuarioPerfil {
+  id        String  @id @default(cuid())
+  usuarioId String
+  perfilId  String
+
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  perfil    Perfil  @relation(fields: [perfilId], references: [id])
+
+  @@unique([usuarioId, perfilId])
+  @@map("usuarios_perfis")
+}
+
+// ============================================================
+// TIPOS DE MATÉRIA E FLUXOS
+// ============================================================
+
+model TipoMateria {
+  id               String   @id @default(cuid())
+  casaId           String
+  nome             String
+  sigla            String
+  descricao        String?
+  prefixoNumero    String   // PL, PDL, MOC, REQ, etc.
+  exigeParecerJuridico Boolean @default(false)
+  exigeComissao    Boolean  @default(true)
+  prazoTramitacao  Int?     // dias
+  template         String?  // template do documento
+  ativo            Boolean  @default(true)
+  criadoEm         DateTime @default(now())
+  atualizadoEm     DateTime @updatedAt
+
+  casa             CasaLegislativa @relation(fields: [casaId], references: [id])
+  proposicoes      Proposicao[]
+  fluxoProcesso    FluxoProcesso[]
+  regras           Regra[]
+
+  @@unique([casaId, sigla])
+  @@map("tipos_materia")
+}
+
+model FluxoProcesso {
+  id             String   @id @default(cuid())
+  tipoMateriaId  String?
+  nome           String
+  descricao      String?
+  versao         String   @default("1.0")
+  bpmnXml        String   // conteúdo BPMN
+  camundaKey     String?  // chave no Camunda
+  camundaVersion Int?     // versão deployada
+  status         StatusFluxo @default(RASCUNHO)
+  ativo          Boolean  @default(true)
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+  publicadoEm    DateTime?
+
+  tipoMateria    TipoMateria? @relation(fields: [tipoMateriaId], references: [id])
+  instancias     InstanciaProcesso[]
+
+  @@map("fluxos_processo")
+}
+
+enum StatusFluxo {
+  RASCUNHO
+  ATIVO
+  DEPRECIADO
+  ARQUIVADO
+}
+
+model Regra {
+  id            String   @id @default(cuid())
+  tipoMateriaId String?
+  nome          String
+  descricao     String?
+  tipo          TipoRegra
+  condicoes     Json     // estrutura JSON das condições
+  acoes         Json     // o que fazer quando satisfeita
+  prioridade    Int      @default(0)
+  ativo         Boolean  @default(true)
+  versao        Int      @default(1)
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  tipoMateria   TipoMateria? @relation(fields: [tipoMateriaId], references: [id])
+
+  @@map("regras")
+}
+
+enum TipoRegra {
+  ROTEAMENTO
+  VALIDACAO
+  PRAZO
+  NOTIFICACAO
+  BLOQUEIO
+  QUORUM
+}
+
+// ============================================================
+// PROPOSIÇÕES — Entidade Central
+// ============================================================
+
+model Proposicao {
+  id             String   @id @default(cuid())
+  casaId         String   // não mapeado, desnormalizado para queries rápidas
+  numero         String   // ex: PL-001/2024
+  ano            Int
+  tipoMateriaId  String
+  orgaoDestinoId String?
+  autorId        String?  // usuário autor (se interno)
+  autorExterno   String?  // nome quando autor é externo
+  ementa         String
+  textoCompleto  String?
+  origem         OrigemProposicao @default(VEREADOR)
+  regime         RegimeTramitacao @default(ORDINARIO)
+  status         StatusProposicao @default(RASCUNHO)
+  prioridade     PrioridadeProposicao @default(NORMAL)
+  palavrasChave  String[]
+  assunto        String?
+  observacoes    String?
+  processoId     String?  // ID da instância no Camunda
+  criadoEm      DateTime  @default(now())
+  atualizadoEm  DateTime  @updatedAt
+  protocoladoEm DateTime?
+  arquivadoEm   DateTime?
+
+  tipoMateria    TipoMateria @relation(fields: [tipoMateriaId], references: [id])
+  orgaoDestino   Orgao?      @relation("OrgaoDestino", fields: [orgaoDestinoId], references: [id])
+  autor          Usuario?    @relation("AutorProposicao", fields: [autorId], references: [id])
+  documentos     Documento[]
+  tramitacoes    TramitacaoEvento[]
+  instanciaProcesso InstanciaProcesso?
+  pautas         ItemPauta[]
+  votos          VotoRegistrado[]
+  assinaturas    AssinaturaDocumento[]
+  publicacoes    PublicacaoOficial[]
+  notificacoes   Notificacao[]
+
+  @@unique([numero])
+  @@map("proposicoes")
+}
+
+enum OrigemProposicao {
+  VEREADOR
+  MESA_DIRETORA
+  COMISSAO
+  PREFEITURA
+  POPULAR
+  EXTERNA
+}
+
+enum RegimeTramitacao {
+  ORDINARIO
+  URGENTE
+  URGENCIA_ESPECIAL
+  SUMARIO
+}
+
+enum StatusProposicao {
+  RASCUNHO
+  EM_ELABORACAO
+  PROTOCOLADO
+  EM_ANALISE
+  EM_COMISSAO
+  AGUARDANDO_PARECER_JURIDICO
+  EM_PAUTA
+  EM_VOTACAO
+  APROVADO
+  REJEITADO
+  DEVOLVIDO
+  PUBLICADO
+  ARQUIVADO
+  SUSPENSO
+  RETIRADO
+}
+
+enum PrioridadeProposicao {
+  BAIXA
+  NORMAL
+  ALTA
+  URGENTE
+}
+
+// ============================================================
+// TRAMITAÇÃO — Histórico de Eventos
+// ============================================================
+
+model TramitacaoEvento {
+  id              String   @id @default(cuid())
+  proposicaoId    String
+  sequencia       Int      // número sequencial do evento
+  tipo            TipoEventoTramitacao
+  descricao       String
+  statusAntes     StatusProposicao?
+  statusDepois    StatusProposicao?
+  orgaoOrigemId   String?
+  orgaoDestinoId  String?
+  usuarioId       String?
+  observacao      String?
+  dadosAdicionais Json?
+  camundaTaskId   String?  // ID da tarefa no Camunda se houver
+  regraAplicadaId String?
+  criadoEm        DateTime @default(now())
+
+  proposicao      Proposicao  @relation(fields: [proposicaoId], references: [id])
+  orgaoOrigem     Orgao?      @relation(fields: [orgaoOrigemId], references: [id])
+  usuario         Usuario?    @relation(fields: [usuarioId], references: [id])
+  documentosGerados DocumentoEvento[]
+
+  @@map("tramitacao_eventos")
+}
+
+enum TipoEventoTramitacao {
+  PROTOCOLO
+  DISTRIBUICAO
+  ENCAMINHAMENTO
+  DESPACHO
+  PARECER_JURIDICO
+  PARECER_COMISSAO
+  INCLUSAO_PAUTA
+  SESSAO_LEITURA
+  VOTACAO
+  APROVACAO
+  REJEICAO
+  DEVOLUCAO
+  PEDIDO_URGENCIA
+  SUSPENSAO
+  REATIVACAO
+  REDACAO_FINAL
+  ASSINATURA
+  PUBLICACAO
+  ARQUIVAMENTO
+  REABERTURA
+  ANEXACAO
+  RETIFICACAO
+  COMPLEMENTACAO
+}
+
+// ============================================================
+// INSTÂNCIA DE PROCESSO (Camunda)
+// ============================================================
+
+model InstanciaProcesso {
+  id              String   @id @default(cuid())
+  proposicaoId    String   @unique
+  fluxoProcessoId String
+  camundaInstanceId String? @unique
+  camundaStatus   String?
+  etapaAtual      String?
+  variaveis       Json?
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  proposicao      Proposicao   @relation(fields: [proposicaoId], references: [id])
+  fluxoProcesso   FluxoProcesso @relation(fields: [fluxoProcessoId], references: [id])
+  tarefas         TarefaProcesso[]
+
+  @@map("instancias_processo")
+}
+
+model TarefaProcesso {
+  id               String   @id @default(cuid())
+  instanciaId      String
+  camundaTaskId    String   @unique
+  nome             String
+  tipo             String
+  atribuidoAId     String?
+  atribuidoAOrgaoId String?
+  status           StatusTarefa @default(PENDENTE)
+  variaveis        Json?
+  prazo            DateTime?
+  concluida        Boolean  @default(false)
+  criadoEm         DateTime @default(now())
+  atualizadoEm     DateTime @updatedAt
+  concluidaEm      DateTime?
+
+  instancia        InstanciaProcesso @relation(fields: [instanciaId], references: [id])
+
+  @@map("tarefas_processo")
+}
+
+enum StatusTarefa {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+  EXPIRADA
+}
+
+// ============================================================
+// DOCUMENTOS
+// ============================================================
+
+model Documento {
+  id             String   @id @default(cuid())
+  proposicaoId   String?
+  nome           String
+  tipo           TipoDocumento
+  status         StatusDocumento @default(RASCUNHO)
+  versaoAtual    Int      @default(1)
+  storageKey     String?  // chave no MinIO
+  mimeType       String?
+  tamanho        Int?     // bytes
+  hash           String?  // SHA-256 para integridade
+  metadados      Json?
+  publico        Boolean  @default(false)
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  proposicao     Proposicao? @relation(fields: [proposicaoId], references: [id])
+  versoes        VersaoDocumento[]
+  assinaturas    AssinaturaDocumento[]
+  eventos        DocumentoEvento[]
+
+  @@map("documentos")
+}
+
+enum TipoDocumento {
+  TEXTO_PRINCIPAL
+  ANEXO
+  PARECER_JURIDICO
+  PARECER_COMISSAO
+  ATA
+  OFICIO
+  DESPACHO
+  CONVOCACAO
+  PAUTA
+  REDACAO_FINAL
+  PUBLICACAO
+  COMPROVANTE
+  OUTROS
+}
+
+enum StatusDocumento {
+  RASCUNHO
+  REVISAO
+  APROVADO
+  PROTOCOLADO
+  PUBLICADO
+  ARQUIVADO
+  CANCELADO
+}
+
+model VersaoDocumento {
+  id          String   @id @default(cuid())
+  documentoId String
+  versao      Int
+  storageKey  String
+  hash        String?
+  alteracoes  String?
+  criadoPorId String?
+  criadoEm    DateTime @default(now())
+
+  documento   Documento @relation(fields: [documentoId], references: [id])
+
+  @@unique([documentoId, versao])
+  @@map("versoes_documento")
+}
+
+model DocumentoEvento {
+  id           String @id @default(cuid())
+  eventoId     String
+  documentoId  String
+
+  evento       TramitacaoEvento @relation(fields: [eventoId], references: [id])
+  documento    Documento        @relation(fields: [documentoId], references: [id])
+
+  @@map("documentos_eventos")
+}
+
+model AssinaturaDocumento {
+  id           String   @id @default(cuid())
+  documentoId  String?
+  proposicaoId String?
+  usuarioId    String
+  tipo         TipoAssinatura
+  status       StatusAssinatura @default(PENDENTE)
+  hash         String?
+  certificado  String?
+  carimbotempo String?
+  observacao   String?
+  criadoEm     DateTime @default(now())
+  assinadoEm   DateTime?
+
+  documento    Documento?   @relation(fields: [documentoId], references: [id])
+  proposicao   Proposicao?  @relation(fields: [proposicaoId], references: [id])
+  usuario      Usuario      @relation(fields: [usuarioId], references: [id])
+
+  @@map("assinaturas_documento")
+}
+
+enum TipoAssinatura {
+  AUTOR
+  REVISOR
+  APROVADOR
+  PRESIDENTE
+  SECRETARIO
+  TESTEMUNHA
+}
+
+enum StatusAssinatura {
+  PENDENTE
+  ASSINADO
+  RECUSADO
+  EXPIRADO
+}
+
+// ============================================================
+// SESSÕES LEGISLATIVAS
+// ============================================================
+
+model SessaoLegislativa {
+  id           String   @id @default(cuid())
+  casaId       String
+  numero       String
+  tipo         TipoSessao
+  data         DateTime
+  horaInicio   String?
+  horaFim      String?
+  local        String?
+  status       StatusSessao @default(AGENDADA)
+  quorumMinimo Int?
+  presentes    Int?
+  ata          String?
+  observacoes  String?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  casa         CasaLegislativa @relation(fields: [casaId], references: [id])
+  pauta        ItemPauta[]
+  presencas    PresencaSessao[]
+  votos        VotoRegistrado[]
+
+  @@map("sessoes_legislativas")
+}
+
+enum TipoSessao {
+  ORDINARIA
+  EXTRAORDINARIA
+  ESPECIAL
+  SOLENE
+  SECRETA
+}
+
+enum StatusSessao {
+  AGENDADA
+  ABERTA
+  ENCERRADA
+  CANCELADA
+  SUSPENSA
+}
+
+model ItemPauta {
+  id            String   @id @default(cuid())
+  sessaoId      String
+  proposicaoId  String
+  ordem         Int
+  tipo          TipoPauta
+  situacao      SituacaoPauta @default(PENDENTE)
+  criadoEm      DateTime @default(now())
+
+  sessao        SessaoLegislativa @relation(fields: [sessaoId], references: [id])
+  proposicao    Proposicao        @relation(fields: [proposicaoId], references: [id])
+
+  @@map("itens_pauta")
+}
+
+enum TipoPauta {
+  PRIMEIRA_LEITURA
+  SEGUNDA_LEITURA
+  VOTACAO
+  DISCUSSAO
+  RETIRADA
+}
+
+enum SituacaoPauta {
+  PENDENTE
+  LIDO
+  DISCUTIDO
+  VOTADO
+  RETIRADO
+  ADIADO
+}
+
+model PresencaSessao {
+  id        String  @id @default(cuid())
+  sessaoId  String
+  vereadorId String
+  presente  Boolean @default(true)
+  justificativa String?
+
+  sessao    SessaoLegislativa @relation(fields: [sessaoId], references: [id])
+
+  @@unique([sessaoId, vereadorId])
+  @@map("presencas_sessao")
+}
+
+model VotoRegistrado {
+  id           String   @id @default(cuid())
+  sessaoId     String
+  proposicaoId String
+  vereadorId   String
+  voto         TipoVoto
+  justificativa String?
+  criadoEm     DateTime @default(now())
+
+  sessao       SessaoLegislativa @relation(fields: [sessaoId], references: [id])
+  proposicao   Proposicao        @relation(fields: [proposicaoId], references: [id])
+
+  @@unique([sessaoId, proposicaoId, vereadorId])
+  @@map("votos_registrados")
+}
+
+enum TipoVoto {
+  SIM
+  NAO
+  ABSTENCAO
+  AUSENTE
+}
+
+// ============================================================
+// PUBLICAÇÃO
+// ============================================================
+
+model PublicacaoOficial {
+  id           String   @id @default(cuid())
+  proposicaoId String
+  tipo         TipoPublicacao
+  numero       String?
+  data         DateTime
+  url          String?
+  storageKey   String?
+  conteudo     String?
+  status       StatusPublicacao @default(PENDENTE)
+  criadoEm     DateTime @default(now())
+
+  proposicao   Proposicao @relation(fields: [proposicaoId], references: [id])
+
+  @@map("publicacoes_oficiais")
+}
+
+enum TipoPublicacao {
+  DIARIO_OFICIAL
+  PORTAL_TRANSPARENCIA
+  INTERNA
+  EXTRATO
+}
+
+enum StatusPublicacao {
+  PENDENTE
+  PUBLICADO
+  CANCELADO
+}
+
+// ============================================================
+// NOTIFICAÇÕES
+// ============================================================
+
+model Notificacao {
+  id           String   @id @default(cuid())
+  usuarioId    String
+  proposicaoId String?
+  tipo         TipoNotificacao
+  titulo       String
+  mensagem     String
+  lida         Boolean  @default(false)
+  acao         String?  // URL ou ação
+  dadosExtra   Json?
+  criadoEm     DateTime @default(now())
+  lidaEm       DateTime?
+
+  usuario      Usuario    @relation(fields: [usuarioId], references: [id])
+  proposicao   Proposicao? @relation(fields: [proposicaoId], references: [id])
+
+  @@map("notificacoes")
+}
+
+enum TipoNotificacao {
+  TAREFA_PENDENTE
+  PRAZO_VENCENDO
+  PRAZO_VENCIDO
+  ASSINATURA_PENDENTE
+  MUDANCA_STATUS
+  ENCAMINHAMENTO
+  VOTACAO_AGENDADA
+  PUBLICACAO
+  SISTEMA
+}
+
+// ============================================================
+// CALENDÁRIO
+// ============================================================
+
+model CalendarioLegislativo {
+  id       String   @id @default(cuid())
+  casaId   String
+  data     DateTime
+  tipo     TipoCalendario
+  descricao String?
+  impactoTramitacao Boolean @default(false)
+
+  casa     CasaLegislativa @relation(fields: [casaId], references: [id])
+
+  @@map("calendario_legislativo")
+}
+
+enum TipoCalendario {
+  FERIADO_NACIONAL
+  FERIADO_MUNICIPAL
+  RECESSO
+  SESSAO_AGENDADA
+  EVENTO_ESPECIAL
+}
+
+// ============================================================
+// AUDITORIA — Log Imutável
+// ============================================================
+
+model AuditoriaLog {
+  id           String   @id @default(cuid())
+  usuarioId    String?
+  entidade     String   // nome da tabela/entidade
+  entidadeId   String   // id do registro
+  acao         AcaoAuditoria
+  dadosAntes   Json?
+  dadosDepois  Json?
+  ip           String?
+  userAgent    String?
+  endpoint     String?
+  criadoEm     DateTime @default(now())
+
+  usuario      Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@map("auditoria_logs")
+}
+
+enum AcaoAuditoria {
+  CRIAR
+  LER
+  ATUALIZAR
+  EXCLUIR
+  LOGIN
+  LOGOUT
+  EXPORTAR
+  IMPRIMIR
+  ASSINAR
+  PUBLICAR
+  ARQUIVAR
+}

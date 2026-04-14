@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #0f1117;
+  --ink-2: #13161f;
+  --ink-3: #1c202e;
+  --ink-4: #252a3a;
+  --line: #1e2333;
+  --line-2: #2a3048;
+  --text: #e8eaf0;
+  --text-2: #9198b0;
+  --text-3: #5c6282;
+  --blue: #2d7dd2;
+  --blue-2: #1e6fbf;
+  --blue-soft: #0d1e35;
+  --green: #1fa870;
+  --green-soft: #0a2318;
+  --amber: #e8a020;
+  --amber-soft: #2e1f06;
+  --red: #d94040;
+  --red-soft: #2e0e0e;
+  --purple: #7c5cbf;
+  --purple-soft: #1a1030;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans), 'IBM Plex Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar custom */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--ink-2);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* Transições padrão */
+.transition-default {
+  transition: all 0.15s ease;
+}
+
+/* Chip de status */
+.status-chip {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+/* Card legislativo */
+.leg-card {
+  @apply bg-[#13161f] border border-[#1e2333] rounded-lg;
+}
+
+/* Monospace */
+.mono {
+  font-family: var(--font-mono), 'IBM Plex Mono', monospace;
+}

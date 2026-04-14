@@ -1,0 +1,100 @@
+{
+  "realm": "legislativo",
+  "enabled": true,
+  "displayName": "Sistema Legislativo Municipal",
+  "accessTokenLifespan": 28800,
+  "ssoSessionIdleTimeout": 28800,
+  "ssoSessionMaxLifespan": 86400,
+  "loginTheme": "keycloak",
+  "emailTheme": "keycloak",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["pt-BR", "en"],
+  "defaultLocale": "pt-BR",
+  "clients": [
+    {
+      "clientId": "legislativo-web",
+      "name": "Sistema Legislativo — Web",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": ["http://localhost:3000/*", "https://*.camaramunicipal.gov.br/*"],
+      "webOrigins": ["http://localhost:3000", "+"],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "legislativo-api",
+      "name": "Sistema Legislativo — API",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "legislativo-api-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "roles": {
+    "realm": [
+      { "name": "ADMINISTRADOR",        "description": "Acesso total ao sistema" },
+      { "name": "GESTOR_LEGISLATIVO",   "description": "Gestor de tramitação" },
+      { "name": "PROTOCOLO",            "description": "Setor de protocolo" },
+      { "name": "VEREADOR",             "description": "Vereador eleito" },
+      { "name": "PROCURADORIA",         "description": "Procuradoria jurídica" },
+      { "name": "COMISSAO",             "description": "Membro de comissão" },
+      { "name": "PRESIDENCIA",          "description": "Presidência da câmara" },
+      { "name": "CONTROLADORIA",        "description": "Controle interno" },
+      { "name": "PUBLICACAO",           "description": "Seção de publicação" },
+      { "name": "CONSULTA_PUBLICA",     "description": "Acesso público somente leitura" }
+    ]
+  },
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@camaramunicipal.gov.br",
+      "firstName": "Administrador",
+      "lastName": "Sistema",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Admin@2024!", "temporary": false }],
+      "realmRoles": ["ADMINISTRADOR"]
+    },
+    {
+      "username": "secretario",
+      "email": "secretario@camaramunicipal.gov.br",
+      "firstName": "Carlos Eduardo",
+      "lastName": "Lima",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Secretario@2024!", "temporary": true }],
+      "realmRoles": ["GESTOR_LEGISLATIVO"]
+    },
+    {
+      "username": "protocolo",
+      "email": "protocolo@camaramunicipal.gov.br",
+      "firstName": "Ana Beatriz",
+      "lastName": "Santos",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Protocolo@2024!", "temporary": true }],
+      "realmRoles": ["PROTOCOLO"]
+    }
+  ],
+  "passwordPolicy": "length(8) and digits(1) and specialChars(1) and upperCase(1)",
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "smtpServer": {
+    "host": "localhost",
+    "port": "1025",
+    "from": "noreply@camaramunicipal.gov.br",
+    "fromDisplayName": "Câmara Municipal",
+    "auth": "false",
+    "starttls": "false",
+    "ssl": "false"
+  }
+}

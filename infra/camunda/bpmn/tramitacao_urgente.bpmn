@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+             id="Definitions_tramitacao_urgente"
+             targetNamespace="http://legislativo.municipal/bpmn"
+             exporter="Legislativo Municipal"
+             exporterVersion="1.0">
+
+  <process id="tramitacao_urgente" name="Tramitação em Regime de Urgência" isExecutable="true">
+
+    <!-- INÍCIO -->
+    <startEvent id="inicio_urgente" name="Urgência Protocolada">
+      <outgoing>flow_u1</outgoing>
+    </startEvent>
+
+    <!-- Verificação sumária — presidência pode despachar direto -->
+    <userTask id="task_despacho_presidencia" name="Despacho da Presidência"
+              camunda:candidateGroups="PRESIDENCIA,MESA_DIRETORA">
+      <documentation>Presidência analisa pedido de urgência e decide encaminhamento</documentation>
+      <extensionElements>
+        <camunda:formData>
+          <camunda:formField id="urgenciaAceita" label="Aceitar regime de urgência?" type="boolean"/>
+          <camunda:formField id="justificativa" label="Justificativa" type="string"/>
+          <camunda:formField id="sessaoDesejada" label="ID da Sessão" type="string"/>
+        </camunda:formData>
+      </extensionElements>
+      <incoming>flow_u1</incoming>
+      <outgoing>flow_u2</outgoing>
+    </userTask>
+
+    <sequenceFlow id="flow_u1" sourceRef="inicio_urgente" targetRef="task_despacho_presidencia"/>
+
+    <!-- Urgência aceita? -->
+    <exclusiveGateway id="gw_urgencia" name="Urgência Aceita?">
+      <incoming>flow_u2</incoming>
+      <outgoing>flow_u_sim</outgoing>
+      <outgoing>flow_u_nao</outgoing>
+    </exclusiveGateway>
+
+    <sequenceFlow id="flow_u2" sourceRef="task_despacho_presidencia" targetRef="gw_urgencia"/>
+
+    <!-- Não aceita → volta ao fluxo ordinário ou arquiva -->
+    <endEvent id="fim_urgencia_negada" name="Urgência Negada">
+      <incoming>flow_u_nao</incoming>
+    </endEvent>
+
+    <sequenceFlow id="flow_u_nao" sourceRef="gw_urgencia" targetRef="fim_urgencia_negada">
+      <conditionExpression xsi:type="tFormalExpression">${urgenciaAceita == false}</conditionExpression>
+    </sequenceFlow>
+
+    <!-- Aceita → inclusão direta em pauta -->
+    <userTask id="task_inclusao_pauta_urgente" name="Incluir em Pauta Urgente"
+              camunda:candidateGroups="MESA_DIRETORA,PRESIDENCIA">
+      <documentation>Incluir imediatamente na pauta da sessão indicada</documentation>
+      <extensionElements>
+        <camunda:formData>
+          <camunda:formField id="sessaoId" label="Sessão" type="string"/>
+          <camunda:formField id="ordemPauta" label="Ordem" type="long"/>
+        </camunda:formData>
+      </extensionElements>
+      <incoming>flow_u_sim</incoming>
+      <outgoing>flow_u3</outgoing>
+    </userTask>
+
+    <sequenceFlow id="flow_u_sim" sourceRef="gw_urgencia" targetRef="task_inclusao_pauta_urgente">
+      <conditionExpression xsi:type="tFormalExpression">${urgenciaAceita == true}</conditionExpression>
+    </sequenceFlow>
+
+    <!-- Sessão e votação -->
+    <userTask id="task_votacao_urgente" name="Sessão — Votação Urgente"
+              camunda:candidateGroups="MESA_DIRETORA,PRESIDENCIA">
+      <extensionElements>
+        <camunda:formData>
+          <camunda:formField id="resultadoVotacao" label="Resultado" type="enum">
+            <camunda:value id="APROVADO" name="Aprovado"/>
+            <camunda:value id="REJEITADO" name="Rejeitado"/>
+          </camunda:formField>
+          <camunda:formField id="votosFavor" label="Votos a Favor" type="long"/>
+          <camunda:formField id="votosContra" label="Votos Contra" type="long"/>
+        </camunda:formData>
+      </extensionElements>
+      <incoming>flow_u3</incoming>
+      <outgoing>flow_u4</outgoing>
+    </userTask>
+
+    <sequenceFlow id="flow_u3" sourceRef="task_inclusao_pauta_urgente" targetRef="task_votacao_urgente"/>
+
+    <exclusiveGateway id="gw_resultado_urgente" name="Resultado">
+      <incoming>flow_u4</incoming>
+      <outgoing>flow_u_aprovado</outgoing>
+      <outgoing>flow_u_rejeitado</outgoing>
+    </exclusiveGateway>
+
+    <sequenceFlow id="flow_u4" sourceRef="task_votacao_urgente" targetRef="gw_resultado_urgente"/>
+
+    <endEvent id="fim_u_rejeitado" name="Rejeitado">
+      <incoming>flow_u_rejeitado</incoming>
+    </endEvent>
+
+    <sequenceFlow id="flow_u_rejeitado" sourceRef="gw_resultado_urgente" targetRef="fim_u_rejeitado">
+      <conditionExpression xsi:type="tFormalExpression">${resultadoVotacao == 'REJEITADO'}</conditionExpression>
+    </sequenceFlow>
+
+    <!-- Aprovado → assinatura e publicação imediata -->
+    <userTask id="task_assinatura_urgente" name="Assinatura"
+              camunda:candidateGroups="PRESIDENCIA">
+      <incoming>flow_u_aprovado</incoming>
+      <outgoing>flow_u5</outgoing>
+    </userTask>
+
+    <sequenceFlow id="flow_u_aprovado" sourceRef="gw_resultado_urgente" targetRef="task_assinatura_urgente">
+      <conditionExpression xsi:type="tFormalExpression">${resultadoVotacao == 'APROVADO'}</conditionExpression>
+    </sequenceFlow>
+
+    <serviceTask id="task_publicacao_urgente" name="Publicação Imediata"
+                 camunda:class="br.legislativo.workers.PublicacaoWorker">
+      <incoming>flow_u5</incoming>
+      <outgoing>flow_u6</outgoing>
+    </serviceTask>
+
+    <sequenceFlow id="flow_u5" sourceRef="task_assinatura_urgente" targetRef="task_publicacao_urgente"/>
+
+    <endEvent id="fim_u_aprovado" name="Aprovado e Publicado">
+      <incoming>flow_u6</incoming>
+    </endEvent>
+
+    <sequenceFlow id="flow_u6" sourceRef="task_publicacao_urgente" targetRef="fim_u_aprovado"/>
+
+  </process>
+</definitions>

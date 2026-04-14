@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             id="Definitions_tramitacao_basica"
+             targetNamespace="http://legislativo.municipal/bpmn"
+             exporter="Legislativo Municipal"
+             exporterVersion="1.0">
+
+  <process id="tramitacao_proposicao_basica" name="Tramitação Básica de Proposição" isExecutable="true">
+
+    <!-- ============================================================ -->
+    <!-- INÍCIO                                                         -->
+    <!-- ============================================================ -->
+    <startEvent id="inicio_protocolo" name="Proposição Protocolada">
+      <outgoing>flow_protocolo_para_analise</outgoing>
+    </startEvent>
+
+    <!-- ============================================================ -->
+    <!-- ANÁLISE INICIAL — Secretaria/Protocolo                        -->
+    <!-- ============================================================ -->
+    <userTask id="task_analise_inicial" name="Análise Inicial" camunda:candidateGroups="PROTOCOLO,SECRETARIA">
+      <documentation>Verificar completude da documentação e conformidade formal da proposição</documentation>
+      <extensionElements>
+        <camunda:formData>
+          <camunda:formField id="conforme" label="Documentação Conforme?" type="boolean"/>
+          <camunda:formField id="observacaoAnalise" label="Observação" type="string"/>
+        </camunda:formData>
+      </extensionElements>
+      <incoming>flow_protocolo_para_analise</incoming>
+      <outgoing>flow_analise_para_gateway</outgoing>
+    </userTask>
+
+    <sequenceFlow id="flow_protocolo_para_analise" sourceRef="inicio_protocolo" targetRef="task_analise_inicial"/>
+
+    <!-- Gateway: Documentação Conforme? -->
+    <exclusiveGateway id="gw_conforme" name="Documentação Conforme?">
+      <incoming>flow_analise_para_gateway</incoming>
+      <outgoing>flow_conforme_sim</outgoing>
+      <outgoing>flow_conforme_nao</outgoing>
+    </exclusiveGateway>
+
+    <sequenceFlow id="flow_analise_para_gateway" sourceRef="task_analise_inicial" targetRef="gw_conforme"/>
+
+    <!-- Não conforme → Devolução -->
+    <userTask id="task_devolucao" name="Devolver ao Autor" camunda:candidateGroups="PROTOCOLO,SECRETARIA">
+      <documentation>Notificar autor e registrar motivo da devolução</documentation>
+      <incoming>flow_conforme_nao</incoming>
+      <outgoing>flow_devolucao_fim</outgoing>
+    </userTask>
+
+    <sequenceFlow id="flow_conforme_nao" sourceRef="gw_conforme" targetRef="task_devolucao">
+      <conditionExpression xsi:type="tFormalExpression">${conforme == false}</conditionExpression>
+    </sequenceFlow>
+
+    <endEvent id="fim_devolucao" name="Proposição Devolvida">
+      <incoming>flow_devolucao_fim</incoming>
+    </endEvent>
+
+    <sequenceFlow id="flow_devolucao_fim" sourceRef="task_devolucao" targetRef="fim_devolucao"/>
+
+    <!-- Conforme → Verificar regras DMN -->
+    <businessRuleTask id="task_regras_roteamento" name="Avaliar Regras de Roteamento"
+                      camunda:decisionRef="decisao_roteamento_proposicao"
+                      camunda:mapDecisionResult="singleEntry"
+                      camunda:resultVariable="roteamento">
+      <incoming>flow_conforme_sim</incoming>
+      <outgoing>flow_regras_para_gateway_juridico</outgoing>
+    </businessRuleTask>
+
+    <sequenceFlow id="flow_conforme_sim" sourceRef="gw_conforme" targetRef="task_regras_roteamento">
+      <conditionExpression xsi:type="tFormalExpression">${conforme == true}</conditionExpression>
+    </sequenceFlow>
+
+    <!-- ============================================================ -->
+    <!-- PARECER JURÍDICO (condicional via DMN)                         -->
+    <!-- ============================================================ -->
+    <exclusiveGateway id="gw_exige_juridico" name="Exige Parecer Jurídico?">
+      <incoming>flow_regras_para_gateway_juridico</incoming>
+      <outgoing>flow_sim_juridico</outgoing>
+      <outgoing>flow_nao_juridico</outgoing>
+    </exclusiveGateway>
+
+    <sequenceFlow id="flow_regras_para_gateway_juridico" sourceRef="task_regras_roteamento" targetRef="gw_exige_juridico"/>
+
+    <userTask id="task_parecer_juridico" name="Elaborar Parecer Jurídico" camunda:candidateGroups="PROCURADORIA">
+      <documentation>Análise jurídica da proposição. Emitir parecer fundamentado.</documentation>
+      <extensionElements>
+        <camunda:formData>
+          <camunda:formField id="parecerJuridico" label="Parecer" type="enum">
+            <camunda:value id="FAVORAVEL" name="Favorável"/>
+            <camunda:value id="DESFAVORAVEL" name="Desfavorável"/>
+            <camunda:value id="FAVORAVEL_COM_RESSALVAS" name="Favorável com Ressalvas"/>
+          </camunda:formField>
+          <camunda:formField id="fundamentacaoJuridica" label="Fundamentação" type="string"/>
+        </camunda:formData>
+      </extensionElements>
+      <incoming>flow_sim_juridico</incoming>
+      <outgoing>flow_juridico_concluido</outgoing>
+    </userTask>
+
+    <sequenceFlow id="flow_sim_juridico" sourceRef="gw_exige_juridico" targetRef="task_parecer_juridico">
+      <conditionExpression xsi:type="tFormalExpression">${roteamento.exigeParecerJuridico == true}</conditionExpression>
+    </sequenceFlow>
+
+    <!-- ============================================================ -->
+    <!-- COMISSÃO                                                       -->
+    <!-- ============================================================ -->
+    <exclusiveGateway id="gw_apos_juridico" name="Merge pós-jurídico">
+      <incoming>flow_juridico_concluido</incoming>
+      <incoming>flow_nao_juridico</incoming>
+      <outgoing>flow_para_comissao</outgoing>
+    </exclusiveGateway>
+
+    <sequenceFlow id="flow_juridico_concluido" sourceRef="task_parecer_juridico" targetRef="gw_apos_juridico"/>
+    <sequenceFlow id="flow_nao_juridico" sourceRef="gw_exige_juridico" targetRef="gw_apos_juridico">
+      <conditionExpression xsi:type="tFormalExpression">${roteamento.exigeParecerJuridico == false}</conditionExpression>
+    </sequenceFlow>
+
+    <userTask id="task_comissao" name="Análise em Comissão" camunda:candidateGroups="COMISSAO_PERMANENTE">
+      <documentation>Comissão responsável analisa e emite parecer sobre a proposição</documentation>
+      <extensionElements>
+        <camunda:formData>
+          <camunda:formField id="parecerComissao" label="Parecer da Comissão" type="enum">
+            <camunda:value id="FAVORAVEL" name="Favorável"/>
+            <camunda:value id="CONTRARIO" name="Contrário"/>
+            <camunda:value id="COM_EMENDA" name="Favorável com Emenda"/>
+          </camunda:formField>
+          <camunda:formField id="relatorId" label="ID do Relator" type="string"/>
+          <camunda:formField id="textoParecerComissao" label="Texto do Parecer" type="string"/>
+        </camunda:formData>
+      </extensionElements>
+      <incoming>flow_para_comissao</incoming>
+      <outgoing>flow_comissao_para_pauta</outgoing>
+    </userTask>
+
+    <sequenceFlow id="flow_para_comissao" sourceRef="gw_apos_juridico" targetRef="task_comissao"/>
+
+    <!-- ============================================================ -->
+    <!-- INCLUSÃO EM PAUTA                                             -->
+    <!-- ============================================================ -->
+    <userTask id="task_inclusao_pauta" name="Incluir em Pauta" camunda:candidateGroups="MESA_DIRETORA,PRESIDENCIA">
+      <documentation>Mesa Diretora organiza a pauta da sessão legislativa</documentation>
+      <extensionElements>
+        <camunda:formData>
+          <camunda:formField id="sessaoId" label="ID da Sessão" type="string"/>
+          <camunda:formField id="ordemPauta" label="Ordem na Pauta" type="long"/>
+          <camunda:formField id="tipoPauta" label="Tipo na Pauta" type="enum">
+            <camunda:value id="PRIMEIRA_LEITURA" name="Primeira Leitura"/>
+            <camunda:value id="SEGUNDA_LEITURA" name="Segunda Leitura"/>
+            <camunda:value id="VOTACAO" name="Votação"/>
+          </camunda:formField>
+        </camunda:formData>
+      </extensionElements>
+      <incoming>flow_comissao_para_pauta</incoming>
+      <outgoing>flow_pauta_para_sessao</outgoing>
+    </userTask>
+
+    <sequenceFlow id="flow_comissao_para_pauta" sourceRef="task_comissao" targetRef="task_inclusao_pauta"/>
+
+    <!-- ============================================================ -->
+    <!-- SESSÃO E VOTAÇÃO                                              -->
+    <!-- ============================================================ -->
+    <userTask id="task_sessao_votacao" name="Sessão — Votação" camunda:candidateGroups="MESA_DIRETORA,PRESIDENCIA">
+      <documentation>Conduzir discussão e registrar votação na sessão legislativa</documentation>
+      <extensionElements>
+        <camunda:formData>
+          <camunda:formField id="resultadoVotacao" label="Resultado" type="enum">
+            <camunda:value id="APROVADO" name="Aprovado"/>
+            <camunda:value id="REJEITADO" name="Rejeitado"/>
+            <camunda:value id="ADIADO" name="Adiado"/>
+          </camunda:formField>
+          <camunda:formField id="votosFavor" label="Votos a Favor" type="long"/>
+          <camunda:formField id="votosContra" label="Votos Contra" type="long"/>
+          <camunda:formField id="abstencoes" label="Abstenções" type="long"/>
+        </camunda:formData>
+      </extensionElements>
+      <incoming>flow_pauta_para_sessao</incoming>
+      <outgoing>flow_votacao_para_resultado</outgoing>
+    </userTask>
+
+    <sequenceFlow id="flow_pauta_para_sessao" sourceRef="task_inclusao_pauta" targetRef="task_sessao_votacao"/>
+
+    <!-- Gateway resultado votação -->
+    <exclusiveGateway id="gw_resultado_votacao" name="Resultado da Votação">
+      <incoming>flow_votacao_para_resultado</incoming>
+      <outgoing>flow_aprovado</outgoing>
+      <outgoing>flow_rejeitado</outgoing>
+      <outgoing>flow_adiado</outgoing>
+    </exclusiveGateway>
+
+    <sequenceFlow id="flow_votacao_para_resultado" sourceRef="task_sessao_votacao" targetRef="gw_resultado_votacao"/>
+
+    <!-- Rejeitado -->
+    <endEvent id="fim_rejeitado" name="Proposição Rejeitada">
+      <incoming>flow_rejeitado</incoming>
+    </endEvent>
+    <sequenceFlow id="flow_rejeitado" sourceRef="gw_resultado_votacao" targetRef="fim_rejeitado">
+      <conditionExpression xsi:type="tFormalExpression">${resultadoVotacao == 'REJEITADO'}</conditionExpression>
+    </sequenceFlow>
+
+    <!-- Adiado → volta para pauta -->
+    <sequenceFlow id="flow_adiado" sourceRef="gw_resultado_votacao" targetRef="task_inclusao_pauta">
+      <conditionExpression xsi:type="tFormalExpression">${resultadoVotacao == 'ADIADO'}</conditionExpression>
+    </sequenceFlow>
+
+    <!-- ============================================================ -->
+    <!-- APROVADO → REDAÇÃO FINAL → ASSINATURA → PUBLICAÇÃO            -->
+    <!-- ============================================================ -->
+    <sequenceFlow id="flow_aprovado" sourceRef="gw_resultado_votacao" targetRef="task_redacao_final">
+      <conditionExpression xsi:type="tFormalExpression">${resultadoVotacao == 'APROVADO'}</conditionExpression>
+    </sequenceFlow>
+
+    <userTask id="task_redacao_final" name="Redação Final" camunda:candidateGroups="SECRETARIA,PROCURADORIA">
+      <documentation>Revisão e redação final do texto aprovado</documentation>
+      <incoming>flow_aprovado</incoming>
+      <outgoing>flow_redacao_para_assinatura</outgoing>
+    </userTask>
+
+    <userTask id="task_assinatura" name="Assinatura" camunda:candidateGroups="PRESIDENCIA,MESA_DIRETORA">
+      <documentation>Assinatura digital do documento final pelos responsáveis</documentation>
+      <incoming>flow_redacao_para_assinatura</incoming>
+      <outgoing>flow_assinatura_para_publicacao</outgoing>
+    </userTask>
+
+    <sequenceFlow id="flow_redacao_para_assinatura" sourceRef="task_redacao_final" targetRef="task_assinatura"/>
+
+    <serviceTask id="task_publicacao" name="Publicar no Diário Oficial"
+                 camunda:class="br.legislativo.workers.PublicacaoWorker">
+      <documentation>Publicar automaticamente no diário oficial ou portal</documentation>
+      <incoming>flow_assinatura_para_publicacao</incoming>
+      <outgoing>flow_publicacao_para_arquivo</outgoing>
+    </serviceTask>
+
+    <sequenceFlow id="flow_assinatura_para_publicacao" sourceRef="task_assinatura" targetRef="task_publicacao"/>
+
+    <serviceTask id="task_arquivamento" name="Arquivar Processo"
+                 camunda:class="br.legislativo.workers.ArquivamentoWorker">
+      <documentation>Arquivar fisicamente e digitalmente com todos os documentos</documentation>
+      <incoming>flow_publicacao_para_arquivo</incoming>
+      <outgoing>flow_arquivo_para_fim</outgoing>
+    </serviceTask>
+
+    <sequenceFlow id="flow_publicacao_para_arquivo" sourceRef="task_publicacao" targetRef="task_arquivamento"/>
+
+    <endEvent id="fim_aprovado_publicado" name="Aprovado e Publicado">
+      <incoming>flow_arquivo_para_fim</incoming>
+    </endEvent>
+
+    <sequenceFlow id="flow_arquivo_para_fim" sourceRef="task_arquivamento" targetRef="fim_aprovado_publicado"/>
+
+  </process>
+</definitions>

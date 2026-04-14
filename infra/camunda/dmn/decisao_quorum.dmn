@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             id="Definitions_quorum"
+             name="Decisões de Quórum"
+             namespace="http://legislativo.municipal/dmn">
+
+  <!--
+    Tabela de decisão: Quórum necessário por tipo de votação
+    Entrada: tipoVotacao, totalVereadores
+    Saída:   quorumMinimo, descricao
+  -->
+  <decision id="decisao_quorum" name="Quórum Necessário">
+    <decisionTable id="dt_quorum" hitPolicy="FIRST">
+
+      <input id="in_tipo_votacao" label="Tipo de Votação">
+        <inputExpression id="ie_tipo_votacao" typeRef="string">
+          <text>tipoVotacao</text>
+        </inputExpression>
+      </input>
+
+      <input id="in_total_vereadores" label="Total de Vereadores">
+        <inputExpression id="ie_total_vereadores" typeRef="integer">
+          <text>totalVereadores</text>
+        </inputExpression>
+      </input>
+
+      <output id="out_quorum_minimo" label="Quórum Mínimo" name="quorumMinimo" typeRef="integer"/>
+      <output id="out_descricao" label="Descrição" name="descricao" typeRef="string"/>
+
+      <!-- Maioria absoluta (2/3) — emenda constitucional / LOM -->
+      <rule id="rule_maioria_absoluta">
+        <inputEntry><text>"EMENDA_LOM","CONCESSAO_TITULO"</text></inputEntry>
+        <inputEntry><text>[9..20]</text></inputEntry>
+        <outputEntry><text>ceiling(totalVereadores * 2 / 3)</text></outputEntry>
+        <outputEntry><text>"Maioria qualificada (2/3)"</text></outputEntry>
+      </rule>
+
+      <!-- Aprovação de contas — maioria absoluta -->
+      <rule id="rule_aprovacao_contas">
+        <inputEntry><text>"APROVACAO_CONTAS"</text></inputEntry>
+        <inputEntry><text></text></inputEntry>
+        <outputEntry><text>ceiling(totalVereadores / 2 + 1)</text></outputEntry>
+        <outputEntry><text>"Maioria absoluta"</text></outputEntry>
+      </rule>
+
+      <!-- Votação ordinária — maioria simples dos presentes -->
+      <rule id="rule_ordinaria">
+        <inputEntry><text>"ORDINARIA","URGENTE"</text></inputEntry>
+        <inputEntry><text></text></inputEntry>
+        <outputEntry><text>floor(totalVereadores / 2) + 1</text></outputEntry>
+        <outputEntry><text>"Maioria simples"</text></outputEntry>
+      </rule>
+
+      <!-- Default -->
+      <rule id="rule_default_quorum">
+        <inputEntry><text></text></inputEntry>
+        <inputEntry><text></text></inputEntry>
+        <outputEntry><text>floor(totalVereadores / 2) + 1</text></outputEntry>
+        <outputEntry><text>"Maioria simples (padrão)"</text></outputEntry>
+      </rule>
+
+    </decisionTable>
+  </decision>
+</definitions>

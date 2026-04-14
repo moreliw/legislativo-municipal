@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/"
+             xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/"
+             id="Definitions_decisao_roteamento"
+             name="Decisões de Roteamento de Proposição"
+             namespace="http://legislativo.municipal/dmn">
+
+  <!-- ============================================================ -->
+  <!-- Tabela de decisão: Roteamento de Proposição                   -->
+  <!-- Entradas: tipoMateria, origem, regime, valorEstimado          -->
+  <!-- Saídas: exigeParecerJuridico, comissaoResponsavel, prazosDias -->
+  <!-- ============================================================ -->
+  <decision id="decisao_roteamento_proposicao" name="Roteamento de Proposição">
+    <decisionTable id="dt_roteamento" hitPolicy="FIRST">
+
+      <!-- INPUTS -->
+      <input id="input_tipo_materia" label="Tipo de Matéria">
+        <inputExpression id="ie_tipo" typeRef="string">
+          <text>tipoMateria</text>
+        </inputExpression>
+        <inputValues>
+          <text>"PL","PDL","MOC","REQ","IND","PRL","RES","DCL","EMD"</text>
+        </inputValues>
+      </input>
+
+      <input id="input_origem" label="Origem">
+        <inputExpression id="ie_origem" typeRef="string">
+          <text>origem</text>
+        </inputExpression>
+      </input>
+
+      <input id="input_regime" label="Regime de Tramitação">
+        <inputExpression id="ie_regime" typeRef="string">
+          <text>regime</text>
+        </inputExpression>
+      </input>
+
+      <!-- OUTPUTS -->
+      <output id="output_parecer_juridico" label="Exige Parecer Jurídico" name="exigeParecerJuridico" typeRef="boolean"/>
+      <output id="output_comissao" label="Comissão Responsável" name="comissaoResponsavel" typeRef="string"/>
+      <output id="output_prazo" label="Prazo (dias)" name="prazoDias" typeRef="integer"/>
+      <output id="output_regime_sugerido" label="Regime Sugerido" name="regimeSugerido" typeRef="string"/>
+
+      <!-- REGRAS -->
+
+      <!-- PL em regime de urgência → sem comissão, sem jurídico, prazo 5 dias -->
+      <rule id="rule_pl_urgente">
+        <inputEntry id="ie_1_1"><text>"PL"</text></inputEntry>
+        <inputEntry id="ie_1_2"><text></text></inputEntry>
+        <inputEntry id="ie_1_3"><text>"URGENTE","URGENCIA_ESPECIAL"</text></inputEntry>
+        <outputEntry id="oe_1_1"><text>false</text></outputEntry>
+        <outputEntry id="oe_1_2"><text>"PLENARIO"</text></outputEntry>
+        <outputEntry id="oe_1_3"><text>5</text></outputEntry>
+        <outputEntry id="oe_1_4"><text>"URGENTE"</text></outputEntry>
+      </rule>
+
+      <!-- PL de origem Prefeitura → exige jurídico, vai para comissão de finanças -->
+      <rule id="rule_pl_prefeitura">
+        <inputEntry id="ie_2_1"><text>"PL"</text></inputEntry>
+        <inputEntry id="ie_2_2"><text>"PREFEITURA"</text></inputEntry>
+        <inputEntry id="ie_2_3"><text></text></inputEntry>
+        <outputEntry id="oe_2_1"><text>true</text></outputEntry>
+        <outputEntry id="oe_2_2"><text>"COMISSAO_FINANCAS"</text></outputEntry>
+        <outputEntry id="oe_2_3"><text>30</text></outputEntry>
+        <outputEntry id="oe_2_4"><text>"ORDINARIO"</text></outputEntry>
+      </rule>
+
+      <!-- PL comum → exige jurídico, comissão competente, 40 dias -->
+      <rule id="rule_pl_ordinario">
+        <inputEntry id="ie_3_1"><text>"PL"</text></inputEntry>
+        <inputEntry id="ie_3_2"><text></text></inputEntry>
+        <inputEntry id="ie_3_3"><text></text></inputEntry>
+        <outputEntry id="oe_3_1"><text>true</text></outputEntry>
+        <outputEntry id="oe_3_2"><text>"COMISSAO_LEGISLACAO"</text></outputEntry>
+        <outputEntry id="oe_3_3"><text>40</text></outputEntry>
+        <outputEntry id="oe_3_4"><text>"ORDINARIO"</text></outputEntry>
+      </rule>
+
+      <!-- MOC → não exige jurídico, direto para plenário, 15 dias -->
+      <rule id="rule_moc">
+        <inputEntry id="ie_4_1"><text>"MOC"</text></inputEntry>
+        <inputEntry id="ie_4_2"><text></text></inputEntry>
+        <inputEntry id="ie_4_3"><text></text></inputEntry>
+        <outputEntry id="oe_4_1"><text>false</text></outputEntry>
+        <outputEntry id="oe_4_2"><text>"PLENARIO"</text></outputEntry>
+        <outputEntry id="oe_4_3"><text>15</text></outputEntry>
+        <outputEntry id="oe_4_4"><text>"ORDINARIO"</text></outputEntry>
+      </rule>
+
+      <!-- REQ → não exige jurídico, sem comissão, prazo 10 dias -->
+      <rule id="rule_req">
+        <inputEntry id="ie_5_1"><text>"REQ"</text></inputEntry>
+        <inputEntry id="ie_5_2"><text></text></inputEntry>
+        <inputEntry id="ie_5_3"><text></text></inputEntry>
+        <outputEntry id="oe_5_1"><text>false</text></outputEntry>
+        <outputEntry id="oe_5_2"><text>"PRESIDENCIA"</text></outputEntry>
+        <outputEntry id="oe_5_3"><text>10</text></outputEntry>
+        <outputEntry id="oe_5_4"><text>"SUMARIO"</text></outputEntry>
+      </rule>
+
+      <!-- PDL → exige jurídico, comissão legislação, 30 dias -->
+      <rule id="rule_pdl">
+        <inputEntry id="ie_6_1"><text>"PDL"</text></inputEntry>
+        <inputEntry id="ie_6_2"><text></text></inputEntry>
+        <inputEntry id="ie_6_3"><text></text></inputEntry>
+        <outputEntry id="oe_6_1"><text>true</text></outputEntry>
+        <outputEntry id="oe_6_2"><text>"COMISSAO_LEGISLACAO"</text></outputEntry>
+        <outputEntry id="oe_6_3"><text>30</text></outputEntry>
+        <outputEntry id="oe_6_4"><text>"ORDINARIO"</text></outputEntry>
+      </rule>
+
+      <!-- Default → exige jurídico, comissão competente, 40 dias -->
+      <rule id="rule_default">
+        <inputEntry id="ie_7_1"><text></text></inputEntry>
+        <inputEntry id="ie_7_2"><text></text></inputEntry>
+        <inputEntry id="ie_7_3"><text></text></inputEntry>
+        <outputEntry id="oe_7_1"><text>true</text></outputEntry>
+        <outputEntry id="oe_7_2"><text>"COMISSAO_COMPETENTE"</text></outputEntry>
+        <outputEntry id="oe_7_3"><text>40</text></outputEntry>
+        <outputEntry id="oe_7_4"><text>"ORDINARIO"</text></outputEntry>
+      </rule>
+
+    </decisionTable>
+  </decision>
+
+</definitions>
