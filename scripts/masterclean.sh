@@ -281,9 +281,14 @@ REDIS_URL="redis://:${REDIS_PASSWORD}@localhost:${REDIS_PORT}"
 printf 'NEXT_PUBLIC_API_URL=https://%s/api\n' "${DOMAIN}" > "${APP_DIR}/apps/web/.env.local"
 ok ".env escrito com sucesso"
 
-info "Instalando dependências (pnpm install)..."
+info "Instalando dependências do monorepo..."
 cd "$APP_DIR"
 pnpm install --no-frozen-lockfile 2>&1 | tail -3
+
+# Instalar deps em cada app separadamente (garante node_modules local para cada um)
+info "Instalando deps da API (node_modules local)..."
+cd "$APP_DIR/apps/api" && pnpm install --no-frozen-lockfile 2>&1 | tail -2
+cd "$APP_DIR"
 
 info "Gerando Prisma client..."
 pnpm --filter @legislativo/api exec prisma generate 2>&1 | tail -2

@@ -1,135 +1,83 @@
 #!/usr/bin/env bash
-# fix-api.sh — Diagnosticar e corrigir leg-api errored
+# fix-api.sh — Corrigir leg-api: instalar deps + recompilar + reiniciar
 set -euo pipefail
 APP_DIR="/opt/legislativo"
-G='\033[0;32m'; B='\033[0;34m'; Y='\033[1;33m'; R='\033[0;31m'; N='\033[0m'
+G='\033[0;32m'; B='\033[0;34m'; Y='\033[1;33m'; N='\033[0m'
 ok()   { echo -e "${G}[✔]${N} $1"; }
 info() { echo -e "${B}[→]${N} $1"; }
 warn() { echo -e "${Y}[!]${N} $1"; }
-err()  { echo -e "${R}[✘]${N} $1"; }
 
 echo ""
-echo "═══════════════════════════════════════"
-echo "  DIAGNÓSTICO + CORREÇÃO — leg-api"
-echo "═══════════════════════════════════════"
+echo "  Corrigindo leg-api — Cannot find module"
 echo ""
 
-# ── 1. Ver logs do PM2 (razão do erro) ──────────────────────────
-info "Logs recentes do leg-api:"
-pm2 logs leg-api --lines 30 --nostream 2>&1 | tail -35
-echo ""
+# 1. Instalar deps na raiz E na pasta da API
+info "Instalando dependências (monorepo + API local)..."
+cd "$APP_DIR"
+pnpm install --no-frozen-lockfile 2>&1 | tail -2
 
-# ── 2. Verificar dist/server.js ─────────────────────────────────
-if [[ -f "$APP_DIR/apps/api/dist/server.js" ]]; then
-  ok "dist/server.js existe ($(wc -c < $APP_DIR/apps/api/dist/server.js) bytes)"
-else
-  err "dist/server.js NÃO EXISTE — precisar recompilar"
-fi
-
-# ── 3. Verificar .env ────────────────────────────────────────────
-info "Variáveis do .env:"
-if [[ -f "$APP_DIR/apps/api/.env" ]]; then
-  grep -v "SECRET\|PASSWORD\|PASS" "$APP_DIR/apps/api/.env" | head -15
-else
-  err ".env não encontrado!"
-fi
-
-# ── 4. Testar conexão com banco ──────────────────────────────────
-info "Testando PostgreSQL..."
-source /root/.legislativo-secrets 2>/dev/null || true
-DB_PORT="${DB_PORT:-5432}"
-if docker exec leg_postgres pg_isready -U legislativo &>/dev/null 2>&1; then
-  ok "PostgreSQL container respondendo"
-else
-  err "PostgreSQL container não responde!"
-  docker ps | grep postgres || echo "Container não está rodando!"
-fi
-
-# ── 5. Testar porta do banco ─────────────────────────────────────
-for port in 5432 5433; do
-  nc -z localhost $port 2>/dev/null && \
-    info "Porta $port: ABERTA" || \
-    info "Porta $port: fechada"
-done
-
-# ── 6. Reconstruir a API ─────────────────────────────────────────
-echo ""
-info "Recompilando API com esbuild..."
 cd "$APP_DIR/apps/api"
+pnpm install --no-frozen-lockfile 2>&1 | tail -2
+ok "node_modules da API instalado"
 
-# Garantir que esbuild está disponível
-if [[ ! -f "node_modules/.bin/esbuild" ]]; then
-  warn "esbuild não encontrado, instalando..."
-  cd "$APP_DIR"
-  pnpm install --no-frozen-lockfile 2>&1 | tail -2
-  cd "$APP_DIR/apps/api"
-fi
+# 2. Gerar Prisma client
+info "Gerando Prisma client..."
+npx prisma generate 2>&1 | tail -2
+ok "Prisma client gerado"
 
+# 3. Recompilar com esbuild (deps agora disponíveis)
+info "Recompilando API..."
 node_modules/.bin/esbuild src/server.ts \
   --bundle --platform=node --target=node20 \
-  --outfile=dist/server.js --packages=external --sourcemap \
-  2>&1 && ok "API recompilada com sucesso!" || err "Erro na compilação!"
+  --outfile=dist/server.js --packages=external \
+  2>&1 | tail -3
+ok "API recompilada ($(wc -c < dist/server.js) bytes)"
 
-# ── 7. Testar se o server inicia ─────────────────────────────────
-info "Testando inicialização da API..."
+# 4. Testar inicialização
+info "Testando API..."
 cd "$APP_DIR/apps/api"
 timeout 8 node dist/server.js &
-SERVER_PID=$!
-sleep 4
-
-if curl -sf "http://localhost:3001/health" &>/dev/null; then
-  ok "API inicia e responde corretamente!"
-  kill $SERVER_PID 2>/dev/null || true
-else
-  warn "API não respondeu no teste manual. Logs:"
-  kill $SERVER_PID 2>/dev/null || true
-fi
-cd "$APP_DIR"
-
-# ── 8. Reiniciar PM2 ─────────────────────────────────────────────
-info "Reiniciando leg-api no PM2..."
-pm2 delete leg-api 2>/dev/null || true
-pm2 start ecosystem.config.js --only leg-api 2>&1 | tail -5
+PID=$!
 sleep 5
-
-# ── 9. Verificar Nginx ───────────────────────────────────────────
-info "Verificando Nginx..."
-if systemctl is-active --quiet nginx; then
-  ok "Nginx ativo"
-  nginx -t 2>&1 | tail -2
+if curl -sf "http://localhost:3001/health" &>/dev/null; then
+  ok "API iniciando corretamente!"
+  kill $PID 2>/dev/null || true
 else
-  warn "Nginx inativo — reiniciando..."
-  systemctl start nginx
-  nginx -t && systemctl reload nginx
+  warn "API não respondeu no teste — verificar logs"
+  kill $PID 2>/dev/null || true
+  # Mostrar erro
+  timeout 4 node dist/server.js 2>&1 | head -15 || true
 fi
 
-# ── 10. Resultado final ──────────────────────────────────────────
-sleep 4
-echo ""
-echo "═══════════════════════════════════════"
-echo "  RESULTADO FINAL"
-echo "═══════════════════════════════════════"
-echo ""
+# 5. Reiniciar PM2
+cd "$APP_DIR"
+info "Reiniciando PM2..."
+pm2 delete leg-api 2>/dev/null || true
+pm2 start ecosystem.config.js --only leg-api 2>&1 | tail -4
+pm2 save --force >/dev/null
+sleep 6
 
-pm2 list
+# 6. Verificar Nginx
+if ! systemctl is-active --quiet nginx; then
+  info "Reiniciando Nginx..."
+  systemctl start nginx
+fi
+nginx -t 2>/dev/null && systemctl reload nginx
+
+# 7. Resultado
+echo ""
+echo "══════════════════════════════════════"
+pm2 list 2>/dev/null | grep -E "name|leg-"
 echo ""
 
 if curl -sf "http://localhost:3001/health" &>/dev/null; then
   ok "API: ONLINE ✅"
-  curl -s "http://localhost:3001/health" | python3 -m json.tool 2>/dev/null | head -6
+  curl -s "http://localhost:3001/health" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -5
 else
-  err "API: ainda offline"
-  info "Logs do PM2:"
-  pm2 logs leg-api --lines 20 --nostream 2>&1 | tail -25
+  warn "API: ainda offline. Logs:"
+  pm2 logs leg-api --lines 30 --nostream 2>&1 | grep -v "^$\|last 30" | tail -20
 fi
 
 echo ""
-if curl -sf "http://localhost" &>/dev/null; then
-  ok "Nginx/Frontend: ONLINE ✅"
-else
-  warn "Nginx: verificar config"
-fi
-
-echo ""
-echo "  http://62.171.161.221"
+curl -sf "http://localhost" &>/dev/null && ok "Site: ONLINE ✅ → http://62.171.161.221" || warn "Nginx: verificar"
 echo ""
