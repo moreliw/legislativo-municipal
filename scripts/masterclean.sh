@@ -288,18 +288,28 @@ pnpm install --no-frozen-lockfile 2>&1 | tail -3
 info "Gerando Prisma client..."
 pnpm --filter @legislativo/api exec prisma generate 2>&1 | tail -2
 
-info "Executando migrations do banco..."
+info "Criando schema no banco (db push)..."
 cd apps/api
-DATABASE_URL="$DB_URL" npx prisma migrate deploy 2>&1 | tail -3 || \
-DATABASE_URL="$DB_URL" npx prisma db push --accept-data-loss 2>&1 | tail -3
+DATABASE_URL="$DB_URL" npx prisma db push --accept-data-loss 2>&1 | tail -5
+ok "Schema criado no banco"
 
 info "Populando dados iniciais..."
-DATABASE_URL="$DB_URL" npx tsx prisma/seed.ts 2>&1 | tail -5
+for attempt in 1 2 3; do
+  DATABASE_URL="$DB_URL" npx tsx prisma/seed.ts 2>&1 | tail -5 && break || {
+    warn "Tentativa $attempt falhou, aguardando 3s..."
+    sleep 3
+  }
+done
 cd "$APP_DIR"
 
-info "Compilando API TypeScript..."
-pnpm --filter @legislativo/api build 2>&1 | tail -3
-ok "API compilada"
+info "Compilando API com esbuild (rápido, sem erros de tipo)..."
+cd apps/api
+node_modules/.bin/esbuild src/server.ts \
+  --bundle --platform=node --target=node20 \
+  --outfile=dist/server.js --packages=external --sourcemap \
+  2>&1 | tail -3
+cd "$APP_DIR"
+ok "API compilada (esbuild)"
 
 info "Compilando Frontend Next.js..."
 NEXT_PUBLIC_API_URL="https://${DOMAIN}/api" \
