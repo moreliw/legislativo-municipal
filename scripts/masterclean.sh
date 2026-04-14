@@ -312,9 +312,32 @@ cd "$APP_DIR"
 ok "API compilada (esbuild)"
 
 info "Compilando Frontend Next.js..."
-NEXT_PUBLIC_API_URL="https://${DOMAIN}/api" \
-  pnpm --filter @legislativo/web build 2>&1 | tail -5
+# Garantir swap disponível para build (Next.js/webpack precisa de RAM)
+if ! swapon --show | grep -q swap; then
+  info "Criando swap temporário para build (2GB)..."
+  fallocate -l 2G /tmp/swap_build 2>/dev/null || dd if=/dev/zero of=/tmp/swap_build bs=1M count=2048 2>/dev/null
+  chmod 600 /tmp/swap_build
+  mkswap /tmp/swap_build 2>/dev/null
+  swapon /tmp/swap_build 2>/dev/null
+  ok "Swap ativado"
+fi
+
+cd apps/web
+NODE_OPTIONS="--max-old-space-size=3072" \
+  NEXT_PUBLIC_API_URL="https://${DOMAIN}/api" \
+  npx next build 2>&1 | tail -10
+
+# Copiar arquivos estáticos para o standalone (necessário para Next.js standalone)
+if [[ -d ".next/standalone" ]]; then
+  cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+  cp -r public .next/standalone/public 2>/dev/null || true
+  ok "Arquivos estáticos copiados para standalone"
+fi
+cd "$APP_DIR"
 ok "Frontend compilado"
+
+# Remover swap temporário
+swapoff /tmp/swap_build 2>/dev/null && rm -f /tmp/swap_build 2>/dev/null || true
 
 # =============================================================================
 # ETAPA 6 — PM2
@@ -340,12 +363,16 @@ module.exports = {
     },
     {
       name: 'leg-web',
-      script: 'node_modules/.bin/next',
-      args: 'start -p 3000 -H 0.0.0.0',
+      script: '.next/standalone/server.js',
       cwd: '/opt/legislativo/apps/web',
       instances: 1,
       exec_mode: 'fork',
-      env: { NODE_ENV: 'production', PORT: '3000', HOSTNAME: '0.0.0.0' },
+      env: {
+        NODE_ENV: 'production',
+        PORT: '3000',
+        HOSTNAME: '0.0.0.0',
+        NEXT_PUBLIC_API_URL: 'https://pleno.morelidev.com/api',
+      },
       error_file: '/var/log/legislativo/web-error.log',
       out_file: '/var/log/legislativo/web-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
