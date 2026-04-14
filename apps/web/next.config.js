@@ -1,13 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  // Ignorar erros de TypeScript no build (erros de tipo não impedem funcionamento)
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Ignorar erros de ESLint no build
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  // Otimizações para build com pouca memória
+  experimental: {
+    // Reduzir uso de memória no build
+    workerThreads: false,
+    cpus: 1,
+  },
+  // Desabilitar source maps em produção para economizar memória
+  productionBrowserSourceMaps: false,
+  // Otimizar imagens
+  images: {
+    unoptimized: true,
   },
 }
 module.exports = nextConfig
