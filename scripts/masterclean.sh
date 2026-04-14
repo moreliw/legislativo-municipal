@@ -328,10 +328,12 @@ NODE_OPTIONS="--max-old-space-size=3072" \
   npx next build 2>&1 | tail -10
 
 # Copiar arquivos estáticos para o standalone (necessário para Next.js standalone)
-if [[ -d ".next/standalone" ]]; then
-  cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
-  cp -r public .next/standalone/public 2>/dev/null || true
-  ok "Arquivos estáticos copiados para standalone"
+# Em monorepo o path é .next/standalone/apps/web/
+STANDALONE_DIR=".next/standalone/apps/web"
+if [[ -d "$STANDALONE_DIR" ]]; then
+  cp -r .next/static "$STANDALONE_DIR/.next/static" 2>/dev/null || true
+  [[ -d "public" ]] && cp -r public "$STANDALONE_DIR/public" 2>/dev/null || true
+  ok "Arquivos estáticos copiados → $STANDALONE_DIR"
 fi
 cd "$APP_DIR"
 ok "Frontend compilado"
@@ -363,7 +365,7 @@ module.exports = {
     },
     {
       name: 'leg-web',
-      script: '.next/standalone/server.js',
+      script: '.next/standalone/apps/web/server.js',
       cwd: '/opt/legislativo/apps/web',
       instances: 1,
       exec_mode: 'fork',
@@ -666,12 +668,26 @@ source /root/.legislativo-secrets
 APP_DIR="/opt/legislativo"
 echo "🚀 Redeploy: $(date)"
 cd "$APP_DIR"
+
 git pull origin main
 pnpm install --no-frozen-lockfile
-DATABASE_URL="postgresql://legislativo:${DB_PASSWORD}@localhost:${DB_PORT:-5432}/legislativo" \
-  pnpm --filter @legislativo/api exec prisma migrate deploy
-pnpm --filter @legislativo/api build
-NEXT_PUBLIC_API_URL="https://${DOMAIN}/api" pnpm --filter @legislativo/web build
+
+# Migrations
+DB_URL="postgresql://legislativo:${DB_PASSWORD}@localhost:${DB_PORT:-5432}/legislativo"
+cd apps/api
+DATABASE_URL="$DB_URL" npx prisma db push --accept-data-loss 2>&1 | tail -3
+
+# Build API com esbuild
+node_modules/.bin/esbuild src/server.ts --bundle --platform=node --target=node20   --outfile=dist/server.js --packages=external --sourcemap 2>&1 | tail -2
+cd "$APP_DIR"
+
+# Build Frontend
+NODE_OPTIONS="--max-old-space-size=3072"   NEXT_PUBLIC_API_URL="https://${DOMAIN}/api"   pnpm --filter @legislativo/web build 2>&1 | tail -5
+
+# Copiar static files para standalone (monorepo path)
+SDIR="apps/web/.next/standalone/apps/web"
+[[ -d "$SDIR" ]] && cp -r apps/web/.next/static "$SDIR/.next/static" 2>/dev/null || true
+
 pm2 reload ecosystem.config.js --update-env
 pm2 save --force
 nginx -t && systemctl reload nginx
