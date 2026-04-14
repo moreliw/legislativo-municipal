@@ -22,7 +22,9 @@ declare module 'fastify' {
 }
 
 export const authPlugin = fp(async (app: FastifyInstance) => {
-  app.decorateRequest('user', null)
+  if (!app.hasRequestDecorator('user')) {
+    app.decorateRequest('user', null)
+  }
 
   app.addHook('onRequest', async (req: FastifyRequest, reply: FastifyReply) => {
     // Rotas públicas não precisam de auth
