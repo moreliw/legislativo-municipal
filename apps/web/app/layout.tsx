@@ -1,21 +1,8 @@
 import type { Metadata } from 'next'
-import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import './globals.css'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { Providers } from './providers'
-
-const ibmPlexSans = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-sans',
-})
-
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-mono',
-})
 
 export const metadata: Metadata = {
   title: 'Sistema Legislativo Municipal',
@@ -24,8 +11,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
-      <body className="bg-[#0F1117] text-[#e8eaf0] antialiased">
+    <html lang="pt-BR">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body
+        className="bg-[#0F1117] text-[#e8eaf0] antialiased"
+        style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }}
+      >
         <Providers>
           <div className="flex h-screen overflow-hidden">
             <Sidebar />

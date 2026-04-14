@@ -166,3 +166,6 @@ export function AcoesRapidas({ proposicao }: AcoesRapidasProps) {
     </div>
   )
 }
+
+
+export default ProposicaoSidebar
