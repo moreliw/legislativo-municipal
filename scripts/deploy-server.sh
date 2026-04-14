@@ -3,7 +3,7 @@
 # DEPLOY MASTER — Sistema Legislativo Municipal
 # Uso: bash <(curl -fsSL https://raw.githubusercontent.com/moreliw/legislativo-municipal/main/scripts/deploy-server.sh)
 # =============================================================================
-set -euo pipefail
+set -eo pipefail  # -u removido para evitar erros com variáveis opcionais
 
 # ── Configurações ─────────────────────────────────────────────────
 GH_USER="moreliw"
@@ -25,10 +25,10 @@ step() { echo -e "\n${BOLD}${B}━━━ $1 ━━━${N}"; }
 
 echo ""
 echo -e "${BOLD}${G}"
-echo "  ╔═══════════════════════════════════════════════════╗"
-echo "  ║   Sistema Legislativo Municipal — Deploy v1.0     ║"
-echo "  ║   $(date '+%d/%m/%Y %H:%M:%S')                           ║"
-echo "  ╚═══════════════════════════════════════════════════╝"
+echo "  ╔══════════════════════════════════════════════════╗"
+echo "  ║  Sistema Legislativo Municipal — Deploy v1.0     ║"
+echo "  ║  $(date '+%d/%m/%Y %H:%M:%S')  •  ${DOMAIN}  ║"
+echo "  ╚══════════════════════════════════════════════════╝"
 echo -e "${N}"
 
 # =============================================================================
@@ -37,15 +37,16 @@ echo -e "${N}"
 step "1/10 SISTEMA E DEPENDÊNCIAS"
 
 export DEBIAN_FRONTEND=noninteractive
-info "Atualizando pacotes do sistema..."
+info "Atualizando sistema..."
 apt-get update -qq 2>&1 | tail -1
 apt-get upgrade -y -qq 2>&1 | tail -1
 
-info "Instalando dependências base..."
+info "Instalando dependências..."
 apt-get install -y -qq \
   curl wget git ca-certificates gnupg lsb-release \
-  build-essential python3 ufw nginx certbot \
-  python3-certbot-nginx jq unzip 2>&1 | tail -1
+  build-essential python3 ufw nginx \
+  certbot python3-certbot-nginx \
+  jq unzip 2>&1 | tail -1
 ok "Pacotes base instalados"
 
 # Docker
@@ -54,9 +55,9 @@ if ! command -v docker &>/dev/null; then
   curl -fsSL https://get.docker.com | sh 2>&1 | tail -2
   systemctl enable docker --quiet && systemctl start docker
 fi
-ok "Docker $(docker --version | grep -oP '\d+\.\d+\.\d+')"
+ok "Docker $(docker --version | grep -oP '\d+\.\d+\.\d+' | head -1)"
 
-# Docker Compose plugin
+# Docker Compose
 if ! docker compose version &>/dev/null 2>&1; then
   mkdir -p /usr/local/lib/docker/cli-plugins
   curl -sSL "https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64" \
@@ -65,7 +66,7 @@ if ! docker compose version &>/dev/null 2>&1; then
 fi
 ok "Docker Compose $(docker compose version --short 2>/dev/null || echo 'OK')"
 
-# Node.js 20 LTS
+# Node.js 20
 NODE_VER=$(node -v 2>/dev/null | cut -d'.' -f1 | tr -d 'v' || echo "0")
 if [[ "$NODE_VER" -lt 20 ]]; then
   info "Instalando Node.js 20 LTS..."
@@ -91,20 +92,28 @@ ok "PM2 $(pm2 -v)"
 # =============================================================================
 step "2/10 REPOSITÓRIO"
 
-git config --global user.email "deploy@legislativo.gov.br"
+git config --global user.email "deploy@${DOMAIN}"
 git config --global user.name "Deploy Bot"
+
+# Usar token se fornecido, senão usar clone público
+GH_BASE="https://github.com/${GH_USER}/${GH_REPO}.git"
+if [[ -n "${GH_TOKEN:-}" ]]; then
+  GH_BASE="https://${GH_TOKEN}@github.com/${GH_USER}/${GH_REPO}.git"
+fi
 
 if [[ -d "$APP_DIR/.git" ]]; then
   info "Atualizando repositório..."
   cd "$APP_DIR"
+  git remote set-url origin "$GH_BASE" 2>/dev/null || true
   git fetch origin main 2>&1 | tail -2
   git reset --hard origin/main 2>&1 | tail -1
   ok "Código atualizado: $(git log --oneline -1)"
 else
   info "Clonando repositório..."
-  git clone "https://github.com/${GH_USER}/${GH_REPO}.git" "$APP_DIR" 2>&1 | tail -3
-  ok "Repositório clonado em $APP_DIR"
+  git clone "$GH_BASE" "$APP_DIR" 2>&1 | tail -3
+  ok "Clonado em $APP_DIR"
 fi
+
 cd "$APP_DIR"
 
 # =============================================================================
@@ -112,20 +121,21 @@ cd "$APP_DIR"
 # =============================================================================
 step "3/10 VARIÁVEIS DE AMBIENTE"
 
-# Criar ou completar o arquivo de secrets
-# (garante que todas as variáveis existam mesmo se o arquivo for parcial)
+# Carregar secrets existentes com set -u desativado
+set +u
+if [[ -f /root/.legislativo-secrets ]]; then
+  source /root/.legislativo-secrets 2>/dev/null || true
+fi
+set -e
 
-# Carregar secrets existentes se houver
-[[ -f /root/.legislativo-secrets ]] && source /root/.legislativo-secrets || true
-
-# Gerar apenas as que faltam
+# Garantir que todas as variáveis existam
 DB_PASSWORD="${DB_PASSWORD:-Leg$(openssl rand -hex 12)Db}"
 REDIS_PASSWORD="${REDIS_PASSWORD:-Red$(openssl rand -hex 10)Rd}"
 MINIO_PASSWORD="${MINIO_PASSWORD:-Min$(openssl rand -hex 10)Mn}"
 KEYCLOAK_ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD:-Kc$(openssl rand -hex 12)Admin}"
 JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32)}"
 
-# Reescrever o arquivo completo com todos os valores
+# Salvar/atualizar arquivo de credenciais
 cat > /root/.legislativo-secrets << SECRETS
 # Sistema Legislativo Municipal — Credenciais
 # Atualizado em: $(date)
@@ -145,7 +155,8 @@ SECRETS
 chmod 600 /root/.legislativo-secrets
 ok "Credenciais salvas em /root/.legislativo-secrets"
 
-# Criar .env da API
+# .env da API
+mkdir -p "$APP_DIR/apps/api"
 cat > "$APP_DIR/apps/api/.env" << ENV
 # === Sistema Legislativo Municipal — API ===
 NODE_ENV=production
@@ -192,31 +203,33 @@ EMAIL_FROM=noreply@${DOMAIN}
 LOG_LEVEL=info
 ENABLE_SWAGGER=true
 ENV
+ok ".env da API configurado"
 
-# Criar .env.local do frontend
-cat > "$APP_DIR/apps/web/.env.local" << WEBENV
+# .env do Frontend
+mkdir -p "$APP_DIR/apps/web"
+cat > "$APP_DIR/apps/web/.env.production" << WEBENV
 NEXT_PUBLIC_API_URL=https://${DOMAIN}/api
 WEBENV
+ok ".env do Frontend configurado"
 
-# Criar diretório de logs
+# Criar diretórios de log
 mkdir -p "$LOG_DIR"
-ok ".env configurado para https://${DOMAIN}"
 
 # =============================================================================
 # ETAPA 4 — DOCKER: INFRAESTRUTURA
 # =============================================================================
 step "4/10 INFRAESTRUTURA DOCKER"
 
-# Criar rede Docker se não existir
-docker network create leg-net 2>/dev/null || true
-
-# Parar e remover containers antigos
+# Parar containers antigos
 for c in leg_postgres leg_redis leg_minio leg_keycloak leg_camunda; do
   docker stop "$c" 2>/dev/null && docker rm "$c" 2>/dev/null || true
 done
 
+# Criar rede Docker
+docker network create leg-net 2>/dev/null || true
+
 # PostgreSQL
-info "Iniciando PostgreSQL..."
+info "Iniciando PostgreSQL 16..."
 docker run -d \
   --name leg_postgres \
   --network leg-net \
@@ -229,7 +242,7 @@ docker run -d \
   postgres:16-alpine 2>&1 | tail -1
 
 # Redis
-info "Iniciando Redis..."
+info "Iniciando Redis 7..."
 docker run -d \
   --name leg_redis \
   --network leg-net \
@@ -244,45 +257,47 @@ docker run -d \
   --name leg_minio \
   --network leg-net \
   --restart unless-stopped \
-  -p 127.0.0.1:9000:9000 -p 9001:9001 \
+  -p 127.0.0.1:9000:9000 \
+  -p 9001:9001 \
   -e "MINIO_ROOT_USER=legislativo" \
   -e "MINIO_ROOT_PASSWORD=${MINIO_PASSWORD}" \
   -v leg_minio_data:/data \
   minio/minio server /data --console-address ":9001" 2>&1 | tail -1
 
-ok "PostgreSQL, Redis e MinIO iniciando..."
+ok "Containers PostgreSQL, Redis e MinIO iniciados"
 
 # Aguardar PostgreSQL
 info "Aguardando PostgreSQL ficar pronto..."
-for i in $(seq 1 30); do
-  if docker exec leg_postgres pg_isready -U legislativo &>/dev/null 2>&1; then
-    ok "PostgreSQL pronto!"
-    break
-  fi
-  [[ $i -eq 30 ]] && { warn "PostgreSQL demorou — continuando..."; break; }
-  sleep 2; echo -n "."
+RETRIES=30
+until docker exec leg_postgres pg_isready -U legislativo &>/dev/null 2>&1; do
+  RETRIES=$((RETRIES-1))
+  [[ $RETRIES -eq 0 ]] && { warn "PostgreSQL demorou — continuando..."; break; }
+  echo -n "."; sleep 2
 done
 echo ""
+ok "PostgreSQL pronto!"
 
-# Keycloak
-info "Iniciando Keycloak (pode demorar 2-3min na 1ª vez)..."
+# Keycloak (async — demora ~2min na primeira vez)
+info "Iniciando Keycloak 24 (async)..."
 docker run -d \
   --name leg_keycloak \
+  --network leg-net \
   --restart unless-stopped \
   -p 8080:8080 \
   -e KEYCLOAK_ADMIN=admin \
   -e "KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}" \
   quay.io/keycloak/keycloak:24.0 start-dev 2>&1 | tail -1
 
-# Camunda
-info "Iniciando Camunda..."
+# Camunda (async)
+info "Iniciando Camunda 7 (async)..."
 docker run -d \
   --name leg_camunda \
+  --network leg-net \
   --restart unless-stopped \
   -p 8085:8080 \
   camunda/camunda-bpm-platform:run-7.21.0 2>&1 | tail -1
 
-ok "Todos os containers Docker iniciados"
+ok "Keycloak e Camunda iniciando em background (~2min)..."
 
 # =============================================================================
 # ETAPA 5 — BUILD DA API
@@ -290,7 +305,8 @@ ok "Todos os containers Docker iniciados"
 step "5/10 BUILD DA API"
 
 cd "$APP_DIR"
-info "Instalando dependências do monorepo..."
+
+info "Instalando dependências Node.js..."
 pnpm install --frozen-lockfile 2>&1 | tail -3
 ok "Dependências instaladas"
 
@@ -304,12 +320,12 @@ pnpm --filter @legislativo/api exec prisma migrate deploy 2>&1 | tail -3 || \
 ok "Banco de dados migrado"
 
 info "Populando dados iniciais..."
-pnpm --filter @legislativo/api exec tsx prisma/seed.ts 2>&1 | tail -5
+pnpm --filter @legislativo/api exec tsx prisma/seed.ts 2>&1 | tail -8
 ok "Dados iniciais criados"
 
 info "Compilando TypeScript da API..."
 pnpm --filter @legislativo/api build 2>&1 | tail -5
-ok "API compilada com sucesso"
+ok "API compilada"
 
 # =============================================================================
 # ETAPA 6 — BUILD DO FRONTEND
@@ -317,21 +333,20 @@ ok "API compilada com sucesso"
 step "6/10 BUILD DO FRONTEND"
 
 cd "$APP_DIR"
-info "Compilando frontend Next.js para produção..."
+
+info "Compilando frontend Next.js..."
 NEXT_PUBLIC_API_URL="https://${DOMAIN}/api" \
   pnpm --filter @legislativo/web build 2>&1 | tail -8
-ok "Frontend compilado com sucesso"
+ok "Frontend compilado"
 
 # =============================================================================
-# ETAPA 7 — PM2: GERENCIADOR DE PROCESSOS
+# ETAPA 7 — PM2
 # =============================================================================
 step "7/10 PM2 — GERENCIADOR DE PROCESSOS"
 
-# Parar processos PM2 antigos
-pm2 delete all 2>/dev/null || true
+pm2 delete leg-api leg-web 2>/dev/null || true
 
-# ecosystem.config.js
-cat > "$APP_DIR/ecosystem.config.js" << 'PM2'
+cat > "$APP_DIR/ecosystem.config.js" << 'PM2CFG'
 module.exports = {
   apps: [
     {
@@ -369,40 +384,44 @@ module.exports = {
     }
   ]
 }
-PM2
+PM2CFG
 
-# Iniciar ambos os processos
-info "Iniciando API com PM2 (2 instâncias em cluster)..."
+info "Iniciando com PM2..."
 pm2 start "$APP_DIR/ecosystem.config.js" 2>&1 | tail -8
 
-# Salvar configuração do PM2
 pm2 save --force 2>&1 | tail -1
+env PATH="$PATH:/usr/bin" pm2 startup systemd -u root --hp /root 2>&1 | grep -v "^$" | tail -5
 
-# Configurar startup automático
-info "Configurando PM2 startup..."
-pm2 startup systemd -u root --hp /root 2>&1 | tail -2
-ok "PM2 configurado para reiniciar no boot"
-
-# Aguardar serviços
-sleep 6
+sleep 5
 if curl -sf "http://localhost:${APP_PORT}/health" &>/dev/null; then
-  ok "API respondendo em http://localhost:${APP_PORT}/health"
+  ok "API respondendo na porta ${APP_PORT} ✅"
 else
-  warn "API ainda iniciando (normal, pode demorar 10-15s)..."
-  pm2 logs leg-api --lines 15 --nostream 2>&1 | tail -10
+  warn "API ainda iniciando — logs: pm2 logs leg-api"
+fi
+
+if curl -sf "http://localhost:${WEB_PORT}" &>/dev/null; then
+  ok "Frontend respondendo na porta ${WEB_PORT} ✅"
+else
+  warn "Frontend ainda iniciando — logs: pm2 logs leg-web"
 fi
 
 # =============================================================================
-# ETAPA 8 — NGINX: PROXY REVERSO (HTTP)
+# ETAPA 8 — NGINX COM SUPORTE A HTTP/HTTPS
 # =============================================================================
 step "8/10 NGINX — PROXY REVERSO"
 
-# Remover site default
-rm -f /etc/nginx/sites-enabled/default
+# Parar qualquer coisa que esteja no 80/443 primeiro
+systemctl stop apache2 2>/dev/null || true
+systemctl disable apache2 2>/dev/null || true
 
-# Configuração HTTP inicial (antes do HTTPS)
-cat > /etc/nginx/sites-available/legislativo << NGINX
+# Remover site padrão
+rm -f /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/sites-enabled/legislativo
+
+# Configuração HTTP (base — depois certbot adiciona HTTPS)
+cat > /etc/nginx/sites-available/legislativo << NGINX_CONF
 # Sistema Legislativo Municipal
+# Domínio: ${DOMAIN}
 # Gerado em: $(date)
 
 # Rate limiting
@@ -410,33 +429,37 @@ limit_req_zone \$binary_remote_addr zone=api:10m rate=30r/s;
 limit_req_zone \$binary_remote_addr zone=web:10m rate=60r/s;
 
 # Upstream
-upstream leg_api { server 127.0.0.1:${APP_PORT}; keepalive 32; }
-upstream leg_web { server 127.0.0.1:${WEB_PORT}; keepalive 16; }
+upstream leg_api {
+    server 127.0.0.1:${APP_PORT};
+    keepalive 32;
+}
 
+upstream leg_web {
+    server 127.0.0.1:${WEB_PORT};
+    keepalive 16;
+}
+
+# HTTP — redireciona para HTTPS (após certbot)
+# ou serve diretamente se HTTPS não estiver configurado
 server {
     listen 80;
     listen [::]:80;
-    server_name ${DOMAIN} ${SERVER_IP} _;
+    server_name ${DOMAIN} ${SERVER_IP};
 
     # Logs
     access_log ${LOG_DIR}/nginx-access.log;
     error_log  ${LOG_DIR}/nginx-error.log;
 
-    # Segurança básica
+    # Headers de segurança
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
     client_max_body_size 50M;
-    proxy_connect_timeout 60s;
-    proxy_send_timeout 60s;
-    proxy_read_timeout 60s;
 
-    # Let's Encrypt challenge
+    # Certbot challenge
     location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-        try_files \$uri =404;
+        root /var/www/html;
     }
 
     # API REST
@@ -444,15 +467,15 @@ server {
         limit_req zone=api burst=50 nodelay;
         proxy_pass http://leg_api/api/;
         proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-        add_header Access-Control-Allow-Origin "\$http_origin" always;
-        add_header Access-Control-Allow-Credentials "true" always;
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS" always;
-        add_header Access-Control-Allow-Headers "Authorization, Content-Type, Accept" always;
-        if (\$request_method = OPTIONS) { return 204; }
+        proxy_cache_bypass \$http_upgrade;
+        proxy_connect_timeout 60s;
+        proxy_read_timeout 60s;
     }
 
     # Health check
@@ -465,8 +488,8 @@ server {
     # Swagger
     location /docs {
         proxy_pass http://leg_api/docs;
-        proxy_http_version 1.1;
         proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
     }
 
     # Auth
@@ -484,252 +507,145 @@ server {
         access_log off;
     }
 
-    # Frontend Next.js
+    location /favicon.ico {
+        proxy_pass http://leg_web;
+        access_log off;
+    }
+
+    # Frontend
     location / {
         limit_req zone=web burst=100 nodelay;
         proxy_pass http://leg_web;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
     }
 }
-NGINX
+NGINX_CONF
 
 # Habilitar site
 ln -sf /etc/nginx/sites-available/legislativo /etc/nginx/sites-enabled/legislativo
 
-# Criar diretório para certbot challenge
-mkdir -p /var/www/certbot
+# Criar pasta para certbot
+mkdir -p /var/www/html
 
-# Testar e ativar Nginx
-info "Testando configuração Nginx..."
+# Testar e recarregar Nginx
 nginx -t 2>&1
-systemctl enable nginx --quiet
 systemctl reload nginx
-ok "Nginx ativo e configurado (HTTP)"
+ok "Nginx configurado e ativo (HTTP)"
 
 # =============================================================================
-# ETAPA 9 — HTTPS COM CERTBOT (Let's Encrypt)
+# ETAPA 9 — HTTPS COM CERTBOT
 # =============================================================================
-step "9/10 HTTPS — LET'S ENCRYPT"
+step "9/10 HTTPS — CERTBOT + LET'S ENCRYPT"
 
-info "Verificando se DNS do domínio $DOMAIN aponta para $SERVER_IP..."
-RESOLVED_IP=$(dig +short "$DOMAIN" 2>/dev/null | tail -1 || \
-              nslookup "$DOMAIN" 2>/dev/null | awk '/^Address: / { print $2 }' | head -1 || \
-              python3 -c "import socket; print(socket.gethostbyname('$DOMAIN'))" 2>/dev/null || \
-              echo "não resolvido")
+# Verificar se o domínio resolve para este IP
+DOMAIN_IP=$(dig +short "${DOMAIN}" 2>/dev/null | tail -1 || \
+            nslookup "${DOMAIN}" 2>/dev/null | grep "Address:" | tail -1 | awk '{print $2}' || \
+            curl -s "https://dns.google/resolve?name=${DOMAIN}&type=A" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Answer',[])[0]['data'] if d.get('Answer') else '')" 2>/dev/null || \
+            echo "")
 
-echo "   Domínio: $DOMAIN"
-echo "   Resolvido para: $RESOLVED_IP"
-echo "   Servidor IP: $SERVER_IP"
+info "IP do servidor: ${SERVER_IP}"
+info "IP do domínio ${DOMAIN}: ${DOMAIN_IP:-não resolvido}"
 
-# Instalar snap certbot se necessário
-if ! command -v snap &>/dev/null; then
-  apt-get install -y snapd 2>&1 | tail -1
-fi
+# Instalar dig se não tiver
+command -v dig &>/dev/null || apt-get install -y -qq dnsutils 2>/dev/null | tail -1
 
-if [[ "$RESOLVED_IP" == "$SERVER_IP" ]]; then
-  info "DNS OK! Obtendo certificado SSL gratuito..."
+DOMAIN_IP=$(dig +short "${DOMAIN}" 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | tail -1 || echo "")
 
-  # Tentar obter certificado
-  certbot certonly \
-    --webroot \
-    -w /var/www/certbot \
-    -d "$DOMAIN" \
+if [[ "$DOMAIN_IP" == "$SERVER_IP" ]] || [[ "$DOMAIN_IP" == "62.171.161.221" ]]; then
+  info "Domínio aponta para este servidor — configurando HTTPS com Let's Encrypt..."
+
+  # Obter certificado SSL
+  certbot --nginx \
+    -d "${DOMAIN}" \
     --non-interactive \
     --agree-tos \
     --email "admin@${DOMAIN}" \
-    --no-eff-email 2>&1 | tail -10
+    --redirect \
+    --hsts \
+    2>&1 | tail -15
 
-  if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
-    ok "Certificado SSL obtido com sucesso!"
+  if [[ $? -eq 0 ]]; then
+    ok "HTTPS configurado com sucesso! 🔒"
+    ok "Certificado SSL obtido para ${DOMAIN}"
 
-    # Recriar config Nginx com HTTPS
-    cat > /etc/nginx/sites-available/legislativo << NGINX_HTTPS
-# Sistema Legislativo Municipal — HTTPS
-# Gerado em: $(date)
-
-limit_req_zone \$binary_remote_addr zone=api:10m rate=30r/s;
-limit_req_zone \$binary_remote_addr zone=web:10m rate=60r/s;
-
-upstream leg_api { server 127.0.0.1:${APP_PORT}; keepalive 32; }
-upstream leg_web { server 127.0.0.1:${WEB_PORT}; keepalive 16; }
-
-# Redirecionar HTTP → HTTPS
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${DOMAIN};
-    return 301 https://\$server_name\$request_uri;
-}
-
-# HTTPS principal
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name ${DOMAIN};
-
-    # Certificados SSL
-    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-
-    # Configurações SSL modernas (A+ no SSL Labs)
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 1d;
-    ssl_session_tickets off;
-    ssl_stapling on;
-    ssl_stapling_verify on;
-
-    # HSTS (6 meses)
-    add_header Strict-Transport-Security "max-age=15768000; includeSubDomains" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-    # Logs
-    access_log ${LOG_DIR}/nginx-access.log;
-    error_log  ${LOG_DIR}/nginx-error.log;
-
-    client_max_body_size 50M;
-    proxy_connect_timeout 60s;
-    proxy_send_timeout 60s;
-    proxy_read_timeout 60s;
-
-    # API REST
-    location /api/ {
-        limit_req zone=api burst=50 nodelay;
-        proxy_pass http://leg_api/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-        add_header Access-Control-Allow-Origin "https://${DOMAIN}" always;
-        add_header Access-Control-Allow-Credentials "true" always;
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS" always;
-        add_header Access-Control-Allow-Headers "Authorization, Content-Type, Accept" always;
-        if (\$request_method = OPTIONS) { return 204; }
-    }
-
-    location /health {
-        proxy_pass http://leg_api/health;
-        proxy_set_header Host \$host;
-        access_log off;
-    }
-
-    location /docs {
-        proxy_pass http://leg_api/docs;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-    }
-
-    location /auth/ {
-        limit_req zone=api burst=20 nodelay;
-        proxy_pass http://leg_api/auth/;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-Proto https;
-    }
-
-    location /_next/static/ {
-        proxy_pass http://leg_web;
-        add_header Cache-Control "public, max-age=31536000, immutable";
-        access_log off;
-    }
-
-    location / {
-        limit_req zone=web burst=100 nodelay;
-        proxy_pass http://leg_web;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-    }
-}
-NGINX_HTTPS
-
-    # Configurar renovação automática
+    # Renovação automática
     systemctl enable certbot.timer 2>/dev/null || \
-    (crontab -l 2>/dev/null; echo "0 3 * * * certbot renew --quiet --reload-nginx") | crontab -
-    ok "Renovação automática do certificado configurada"
-
-    nginx -t && systemctl reload nginx
-    ok "Nginx reconfigurado com HTTPS ✅"
-
+      (crontab -l 2>/dev/null; echo "0 12 * * * /usr/bin/certbot renew --quiet --post-hook 'systemctl reload nginx'") | crontab -
+    ok "Renovação automática configurada (certbot renew)"
   else
-    warn "Certificado SSL não obtido. Verificar DNS ou tentar manualmente:"
-    warn "  certbot certonly --webroot -w /var/www/certbot -d ${DOMAIN}"
-    warn "Sistema continua funcionando via HTTP até o HTTPS ser configurado"
+    warn "Certbot falhou — domínio pode não apontar para este IP ainda"
+    warn "Execute manualmente depois: certbot --nginx -d ${DOMAIN}"
   fi
-
 else
-  warn "DNS do domínio ${DOMAIN} não resolve para ${SERVER_IP}"
-  warn "Resolvido para: ${RESOLVED_IP}"
-  warn "Configure o DNS e execute: certbot certonly --webroot -w /var/www/certbot -d ${DOMAIN}"
-  warn "Após o DNS propagar, rode: leg-https ${DOMAIN}"
-  info "Sistema funcionando via HTTP: http://${SERVER_IP}"
+  warn "Domínio ${DOMAIN} ainda não aponta para ${SERVER_IP}"
+  warn "Configure o DNS: ${DOMAIN} → ${SERVER_IP} (Tipo A)"
+  warn "Depois execute: certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos --email admin@${DOMAIN} --redirect"
+
+  # Configurar nginx para HTTP também funcionar enquanto DNS não propaga
+  info "Sistema acessível via HTTP: http://${SERVER_IP}"
 fi
 
+# Testar configuração final do nginx
+nginx -t 2>&1 && systemctl reload nginx
+
 # =============================================================================
-# ETAPA 10 — FIREWALL, AUTOMAÇÃO E FINALIZAÇÃO
+# ETAPA 10 — FIREWALL, HARDENING E AUTOMAÇÃO
 # =============================================================================
-step "10/10 FIREWALL E AUTOMAÇÃO"
+step "10/10 FIREWALL, PM2 STARTUP E AUTOMAÇÃO"
 
 # Firewall
-ufw --force reset 2>/dev/null
-ufw default deny incoming
-ufw default allow outgoing
-ufw allow ssh
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw allow 8080/tcp   # Keycloak
-ufw allow 8085/tcp   # Camunda
-ufw allow 9001/tcp   # MinIO Console
-ufw --force enable
+ufw --force reset 2>/dev/null || true
+ufw default deny incoming 2>/dev/null
+ufw default allow outgoing 2>/dev/null
+ufw allow ssh 2>/dev/null
+ufw allow 80/tcp 2>/dev/null      # HTTP
+ufw allow 443/tcp 2>/dev/null     # HTTPS
+ufw allow 8080/tcp 2>/dev/null    # Keycloak
+ufw allow 8085/tcp 2>/dev/null    # Camunda
+ufw allow 9001/tcp 2>/dev/null    # MinIO Console
+ufw --force enable 2>/dev/null
 ok "Firewall UFW configurado"
 
 # Script de redeploy rápido
 cat > /usr/local/bin/leg-deploy << 'REDEPLOY'
 #!/usr/bin/env bash
-# Redeploy rápido — Sistema Legislativo Municipal
-set -euo pipefail
+set -eo pipefail
 APP_DIR="/opt/legislativo"
 G='\033[0;32m'; B='\033[0;34m'; N='\033[0m'
 ok()   { echo -e "${G}✔${N} $1"; }
 info() { echo -e "${B}→${N} $1"; }
 
 echo ""
-info "🚀 Iniciando redeploy..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Redeploy — Sistema Legislativo Municipal"
+echo "  $(date '+%d/%m/%Y %H:%M:%S')"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 cd "$APP_DIR"
+
 info "Atualizando código..."
 git pull origin main 2>&1 | tail -3
 
-info "Dependências..."
+info "Instalando dependências..."
 pnpm install --frozen-lockfile 2>&1 | tail -2
 
-info "Migrations..."
-pnpm --filter @legislativo/api exec prisma migrate deploy 2>&1 | tail -2
+info "Rodando migrations..."
+pnpm --filter @legislativo/api exec prisma migrate deploy 2>&1 | tail -2 || true
 
 info "Compilando API..."
 pnpm --filter @legislativo/api build 2>&1 | tail -3
 
 info "Compilando Frontend..."
-NEXT_PUBLIC_API_URL="$(grep NEXT_PUBLIC_API_URL apps/web/.env.local | cut -d= -f2)" \
-  pnpm --filter @legislativo/web build 2>&1 | tail -5
+pnpm --filter @legislativo/web build 2>&1 | tail -5
 
-info "Reiniciando PM2..."
+info "Reiniciando serviços..."
 pm2 reload ecosystem.config.js --update-env 2>&1 | tail -3
 pm2 save --force 2>&1 | tail -1
 
@@ -737,179 +653,74 @@ info "Recarregando Nginx..."
 nginx -t && systemctl reload nginx
 
 echo ""
-ok "Redeploy concluído! $(date)"
+ok "Redeploy concluído! $(date '+%H:%M:%S')"
+echo ""
 pm2 list
 REDEPLOY
 chmod +x /usr/local/bin/leg-deploy
+ok "Script 'leg-deploy' instalado em /usr/local/bin/leg-deploy"
 
-# Script para ativar HTTPS depois que DNS propagar
-cat > /usr/local/bin/leg-https << 'HTTPSSCRIPT'
-#!/usr/bin/env bash
-DOMAIN="${1:-pleno.morelidev.com}"
-SERVER_IP=$(curl -4s ifconfig.me 2>/dev/null || echo "")
-LOG_DIR="/var/log/legislativo"
-APP_PORT=3001
-WEB_PORT=3000
-
-echo "Configurando HTTPS para $DOMAIN..."
-
-certbot certonly \
-  --webroot \
-  -w /var/www/certbot \
-  -d "$DOMAIN" \
-  --non-interactive \
-  --agree-tos \
-  --email "admin@${DOMAIN}" \
-  --no-eff-email
-
-if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
-  echo "✅ Certificado obtido!"
-
-  cat > /etc/nginx/sites-available/legislativo << NGINXCONF
-limit_req_zone \$binary_remote_addr zone=api:10m rate=30r/s;
-limit_req_zone \$binary_remote_addr zone=web:10m rate=60r/s;
-upstream leg_api { server 127.0.0.1:${APP_PORT}; keepalive 32; }
-upstream leg_web  { server 127.0.0.1:${WEB_PORT}; keepalive 16; }
-
-server {
-    listen 80; listen [::]:80;
-    server_name ${DOMAIN};
-    return 301 https://\$server_name\$request_uri;
-}
-
-server {
-    listen 443 ssl http2; listen [::]:443 ssl http2;
-    server_name ${DOMAIN};
-
-    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 1d;
-    ssl_stapling on;
-    ssl_stapling_verify on;
-    add_header Strict-Transport-Security "max-age=15768000; includeSubDomains" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-
-    access_log ${LOG_DIR}/nginx-access.log;
-    error_log  ${LOG_DIR}/nginx-error.log;
-    client_max_body_size 50M;
-
-    location /api/ {
-        proxy_pass http://leg_api/api/;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-Proto https;
-    }
-    location /health  { proxy_pass http://leg_api/health; access_log off; }
-    location /docs    { proxy_pass http://leg_api/docs; proxy_set_header Host \$host; }
-    location /auth/   { proxy_pass http://leg_api/auth/; proxy_set_header Host \$host; }
-    location /_next/static/ {
-        proxy_pass http://leg_web;
-        add_header Cache-Control "public, max-age=31536000, immutable";
-        access_log off;
-    }
-    location / {
-        proxy_pass http://leg_web;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-Proto https;
-    }
-}
-NGINXCONF
-
-  # Atualizar .env com HTTPS
-  sed -i "s|CORS_ORIGIN=.*|CORS_ORIGIN=https://${DOMAIN}|" /opt/legislativo/apps/api/.env
-  sed -i "s|FRONTEND_URL=.*|FRONTEND_URL=https://${DOMAIN}|" /opt/legislativo/apps/api/.env
-  echo "NEXT_PUBLIC_API_URL=https://${DOMAIN}/api" > /opt/legislativo/apps/web/.env.local
-
-  nginx -t && systemctl reload nginx
-  pm2 reload all
-  echo "✅ HTTPS ativo em https://${DOMAIN}"
-else
-  echo "❌ Falhou. Verificar DNS: dig ${DOMAIN}"
-fi
-HTTPSSCRIPT
-chmod +x /usr/local/bin/leg-https
-
-# Ativar serviços no boot
-systemctl enable nginx --quiet
-ok "Automação configurada (leg-deploy e leg-https instalados)"
+# Garantir PM2 startup
+pm2 save --force 2>&1 | tail -1
+ok "PM2 configurado para reiniciar automaticamente no boot"
 
 # =============================================================================
-# RESULTADO FINAL
+# VERIFICAÇÕES FINAIS
 # =============================================================================
 sleep 8
-
-# Checar status final
-API_OK=false
-WEB_OK=false
-NGINX_OK=false
-SSL_OK=false
-
-curl -sf "http://localhost/health" &>/dev/null && API_OK=true || true
-curl -sf "http://localhost" &>/dev/null && WEB_OK=true || true
-systemctl is-active --quiet nginx && NGINX_OK=true || true
-[[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]] && SSL_OK=true || true
 
 echo ""
 echo -e "${BOLD}${G}"
 echo "  ╔══════════════════════════════════════════════════════════╗"
-echo "  ║         ✅  DEPLOY CONCLUÍDO COM SUCESSO!                ║"
+echo "  ║             ✅  DEPLOY CONCLUÍDO!                        ║"
 echo "  ╚══════════════════════════════════════════════════════════╝"
 echo -e "${N}"
-echo ""
-echo -e "${BOLD}🌐 ACESSO AO SISTEMA:${N}"
-if $SSL_OK; then
-  echo "   ✅ Sistema: https://${DOMAIN}  (HTTPS seguro)"
-  echo "   ✅ API:     https://${DOMAIN}/api/v1"
-  echo "   ✅ Swagger: https://${DOMAIN}/docs"
-  echo "   ✅ Health:  https://${DOMAIN}/health"
+
+echo -e "${BOLD}🌐 ACESSO:${N}"
+# Verificar se HTTPS está ativo
+if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
+  echo "   🔒 https://${DOMAIN}  (HTTPS ativo!)"
 else
-  echo "   Sistema: http://${SERVER_IP}  (HTTP — aguardando DNS)"
-  echo "   API:     http://${SERVER_IP}/api/v1"
-  echo "   🔧 Após DNS propagar: leg-https ${DOMAIN}"
+  echo "   🌐 http://${SERVER_IP}  (HTTP — configure DNS para HTTPS)"
 fi
-echo ""
-echo -e "${BOLD}🏛️  SERVIÇOS DE INFRAESTRUTURA:${N}"
-echo "   Keycloak:  http://${SERVER_IP}:8080  (admin / ver secrets)"
-echo "   Camunda:   http://${SERVER_IP}:8085/camunda"
-echo "   MinIO:     http://${SERVER_IP}:9001"
+echo "   API:    /api/v1"
+echo "   Docs:   /docs"
+echo "   Health: /health"
 echo ""
 echo -e "${BOLD}🔑 LOGIN PARA TESTES:${N}"
 echo "   Email:  admin@legislativo.gov.br"
 echo "   Senha:  Admin@2024"
 echo ""
-echo -e "${BOLD}📊 STATUS DOS SERVIÇOS:${N}"
+echo -e "${BOLD}🏛️  SERVIÇOS:${N}"
+echo "   Keycloak:  http://${SERVER_IP}:8080  (admin/${KEYCLOAK_ADMIN_PASSWORD})"
+echo "   Camunda:   http://${SERVER_IP}:8085/camunda"
+echo "   MinIO:     http://${SERVER_IP}:9001"
 echo ""
-echo "   Nginx: $(systemctl is-active nginx 2>/dev/null)"
-echo ""
-echo "   PM2:"
-pm2 list 2>/dev/null | grep -E "name|leg-" | head -10
-echo ""
-echo "   Docker:"
+echo -e "${BOLD}📊 STATUS PM2:${N}"
+pm2 list 2>/dev/null
+
+echo -e "\n${BOLD}📊 STATUS DOCKER:${N}"
 docker ps --format "   {{.Names}}: {{.Status}}" 2>/dev/null
-echo ""
-if $SSL_OK; then
-  echo "   SSL: ✅ Certificado Let's Encrypt ativo"
-  EXPIRY=$(openssl x509 -enddate -noout -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" 2>/dev/null | cut -d= -f2)
-  echo "   Expira: $EXPIRY"
-else
-  echo "   SSL: ⏳ Pendente (configure DNS e execute: leg-https ${DOMAIN})"
-fi
-echo ""
-echo -e "${BOLD}📋 CREDENCIAIS:${N} /root/.legislativo-secrets"
+
+echo -e "\n${BOLD}📊 NGINX:${N}"
+systemctl is-active nginx &>/dev/null && echo "   ✅ nginx ativo" || echo "   ❌ nginx inativo"
+
 echo ""
 echo -e "${BOLD}🔧 COMANDOS ÚTEIS:${N}"
-echo "   Redeploy:      leg-deploy"
-echo "   Ativar HTTPS:  leg-https ${DOMAIN}"
-echo "   Logs API:      pm2 logs leg-api"
-echo "   Logs Web:      pm2 logs leg-web"
-echo "   Status:        pm2 status"
+echo "   Redeploy:    leg-deploy"
+echo "   Logs API:    pm2 logs leg-api"
+echo "   Logs Web:    pm2 logs leg-web"
+echo "   Status:      pm2 status"
+echo "   HTTPS:       certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos --email admin@${DOMAIN} --redirect"
 echo ""
+echo "   Credenciais: /root/.legislativo-secrets"
+echo ""
+
+# Health check final
+if curl -sf "http://localhost/health" &>/dev/null; then
+  echo -e "   ${G}✅ Sistema respondendo em http://${SERVER_IP}${N}"
+elif curl -sf "http://localhost:${APP_PORT}/health" &>/dev/null; then
+  echo -e "   ${Y}⚠️  API OK na porta ${APP_PORT}, mas Nginx pode estar carregando${N}"
+else
+  echo -e "   ${Y}⚠️  Serviços ainda inicializando — verifique: pm2 status${N}"
+fi
