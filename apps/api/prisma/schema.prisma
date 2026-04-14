@@ -80,7 +80,7 @@ enum TipoOrgao {
 model Usuario {
   id           String   @id @default(cuid())
   casaId       String
-  keycloakId   String   @unique
+  keycloakId   String?  @unique  // mantido para migração futura (Keycloak SSO)
   nome         String
   email        String
   cpf          String?  @unique
@@ -99,6 +99,9 @@ model Usuario {
   assinaturas    AssinaturaDocumento[]
   notificacoes   Notificacao[]
   logsAuditoria  AuditoriaLog[]
+  credencial     CredencialUsuario?
+  eventosAuth    EventoAuth[]
+  tokensSeguranca TokenSeguranca[]
 
   @@map("usuarios")
 }
@@ -776,4 +779,106 @@ enum AcaoAuditoria {
   ASSINAR
   PUBLICAR
   ARQUIVAR
+}
+
+// ============================================================
+// AUTENTICAÇÃO PRÓPRIA (JWT + Bcrypt — sem Keycloak)
+// ============================================================
+
+/// Credenciais de acesso do usuário ao sistema
+model CredencialUsuario {
+  id              String    @id @default(cuid())
+  usuarioId       String    @unique
+  senhaHash       String                         // bcrypt hash
+  precisaTrocar   Boolean   @default(false)      // força troca no próximo login
+  tentativasFalhas Int      @default(0)
+  bloqueadoAte    DateTime?                      // bloqueio temporário por brute-force
+  ultimoLoginEm   DateTime?
+  ultimoLoginIp   String?
+  criadoEm        DateTime  @default(now())
+  atualizadoEm    DateTime  @updatedAt
+
+  usuario  Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  sessoes  SessaoAuth[]
+
+  @@map("credenciais_usuario")
+}
+
+/// Sessões ativas (refresh tokens — permite revogação)
+model SessaoAuth {
+  id              String    @id @default(cuid())
+  credencialId    String
+  refreshTokenHash String   @unique               // SHA-256 do refresh token
+  ip              String
+  userAgent       String?
+  ativo           Boolean   @default(true)
+  expiraEm        DateTime
+  criadoEm        DateTime  @default(now())
+  ultimoUsoEm     DateTime  @default(now())
+
+  credencial CredencialUsuario @relation(fields: [credencialId], references: [id], onDelete: Cascade)
+
+  @@index([credencialId, ativo])
+  @@index([expiraEm])
+  @@map("sessoes_auth")
+}
+
+/// Tokens de recuperação de senha e convites
+model TokenSeguranca {
+  id         String           @id @default(cuid())
+  usuarioId  String
+  token      String           @unique             // UUID v4 — entregue ao usuário
+  tipo       TipoTokenSeguranca
+  usado      Boolean          @default(false)
+  expiraEm   DateTime
+  criadoEm   DateTime         @default(now())
+  usadoEm    DateTime?
+  ip         String?
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([usuarioId, tipo])
+  @@map("tokens_seguranca")
+}
+
+enum TipoTokenSeguranca {
+  RECUPERACAO_SENHA
+  CONVITE_USUARIO
+  CONFIRMACAO_EMAIL
+  TROCA_FORCADA
+}
+
+/// Log de eventos de autenticação (auditoria de segurança)
+model EventoAuth {
+  id        String        @id @default(cuid())
+  usuarioId String?
+  casaId    String?
+  email     String?                              // para tentativas com email inválido
+  tipo      TipoEventoAuth
+  ip        String
+  userAgent String?
+  sucesso   Boolean
+  detalhes  String?
+  criadoEm  DateTime      @default(now())
+
+  usuario   Usuario?      @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId, criadoEm])
+  @@index([ip, criadoEm])
+  @@index([tipo, sucesso, criadoEm])
+  @@map("eventos_auth")
+}
+
+enum TipoEventoAuth {
+  LOGIN
+  LOGOUT
+  REFRESH_TOKEN
+  TROCA_SENHA
+  RECUPERACAO_SENHA_SOLICITADA
+  RECUPERACAO_SENHA_CONCLUIDA
+  SESSAO_REVOGADA
+  BLOQUEIO_TEMPORARIO
+  TENTATIVA_INVALIDA
+  CONVITE_ACEITO
 }
