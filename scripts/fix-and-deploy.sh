@@ -181,7 +181,7 @@ ok ".env configurado com printf (sem problemas de chars especiais)"
 step "BUILD DA API"
 
 info "Instalando dependências..."
-pnpm install --frozen-lockfile 2>&1 | tail -2
+pnpm install --no-frozen-lockfile 2>&1 | tail -2
 
 info "Gerando Prisma client..."
 pnpm --filter @legislativo/api exec prisma generate 2>&1 | tail -2
@@ -521,7 +521,7 @@ APP_DIR="/opt/legislativo"
 echo "🚀 Redeploy iniciado: $(date)"
 cd "$APP_DIR"
 git pull origin main 2>&1 | tail -3
-pnpm install --frozen-lockfile 2>&1 | tail -2
+pnpm install --no-frozen-lockfile 2>&1 | tail -2
 pnpm --filter @legislativo/api exec prisma migrate deploy 2>&1 | tail -2
 pnpm --filter @legislativo/api build 2>&1 | tail -3
 source /root/.legislativo-secrets

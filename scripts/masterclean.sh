@@ -283,7 +283,7 @@ ok ".env escrito com sucesso"
 
 info "Instalando dependências (pnpm install)..."
 cd "$APP_DIR"
-pnpm install --frozen-lockfile 2>&1 | tail -3
+pnpm install --no-frozen-lockfile 2>&1 | tail -3
 
 info "Gerando Prisma client..."
 pnpm --filter @legislativo/api exec prisma generate 2>&1 | tail -2
@@ -630,7 +630,7 @@ APP_DIR="/opt/legislativo"
 echo "🚀 Redeploy: $(date)"
 cd "$APP_DIR"
 git pull origin main
-pnpm install --frozen-lockfile
+pnpm install --no-frozen-lockfile
 DATABASE_URL="postgresql://legislativo:${DB_PASSWORD}@localhost:${DB_PORT:-5432}/legislativo" \
   pnpm --filter @legislativo/api exec prisma migrate deploy
 pnpm --filter @legislativo/api build

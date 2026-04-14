@@ -307,7 +307,7 @@ step "5/10 BUILD DA API"
 cd "$APP_DIR"
 
 info "Instalando dependências Node.js..."
-pnpm install --frozen-lockfile 2>&1 | tail -3
+pnpm install --no-frozen-lockfile 2>&1 | tail -3
 ok "Dependências instaladas"
 
 info "Gerando Prisma client..."
@@ -634,7 +634,7 @@ info "Atualizando código..."
 git pull origin main 2>&1 | tail -3
 
 info "Instalando dependências..."
-pnpm install --frozen-lockfile 2>&1 | tail -2
+pnpm install --no-frozen-lockfile 2>&1 | tail -2
 
 info "Rodando migrations..."
 pnpm --filter @legislativo/api exec prisma migrate deploy 2>&1 | tail -2 || true
