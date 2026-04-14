@@ -111,7 +111,7 @@ echo "  ASSESSOR JURÍDICO:"
 echo "  juridico@camararionovosul.es.gov.br / Juridico@2024!"
 echo ""
 
-SOURCE /root/.legislativo-secrets 2>/dev/null || source /root/.legislativo-secrets
+source /root/.legislativo-secrets 2>/dev/null || source /root/.legislativo-secrets
 DOMAIN="${DOMAIN:-pleno.morelidev.com}"
 [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]] && \
   echo "  🌐 https://${DOMAIN}" || \

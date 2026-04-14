@@ -36,6 +36,7 @@ model CasaLegislativa {
   calendarios  CalendarioLegislativo[]
   sessoes      SessaoLegislativa[]
 
+  perfis       Perfil[]
   @@map("casas_legislativas")
 }
 
@@ -122,14 +123,17 @@ model UsuarioOrgao {
 
 model Perfil {
   id           String   @id @default(cuid())
-  nome         String   @unique
+  casaId       String
+  nome         String
   descricao    String?
-  permissoes   String[] // array de strings "modulo:acao"
+  permissoes   String[]
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  usuarios     UsuarioPerfil[]
+  casa     CasaLegislativa @relation(fields: [casaId], references: [id])
+  usuarios UsuarioPerfil[]
 
+  @@unique([casaId, nome])
   @@map("perfis")
 }
 
