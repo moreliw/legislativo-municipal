@@ -35,8 +35,18 @@ npx prisma generate 2>&1 | tail -2
 # 4. Aplicar schema (novos modelos: CredencialUsuario, SessaoAuth, etc.)
 info "Aplicando novos modelos no banco de dados..."
 source /root/.legislativo-secrets
-DB_URL="postgresql://legislativo:${DB_PASSWORD}@localhost:${DB_PORT:-5432}/legislativo"
-DATABASE_URL="$DB_URL" npx prisma db push --accept-data-loss 2>&1 | tail -5
+DB_PORT="${DB_PORT:-5432}"
+DB_URL="postgresql://legislativo:${DB_PASSWORD}@localhost:${DB_PORT}/legislativo"
+
+# Preparar banco: remover constraints antigas antes do db push
+info "Preparando constraints do banco..."
+docker exec leg_postgres psql -U legislativo -d legislativo   -c 'ALTER TABLE perfis DROP CONSTRAINT IF EXISTS perfis_nome_key;'   2>/dev/null || true
+docker exec leg_postgres psql -U legislativo -d legislativo   -c 'ALTER TABLE perfis ADD COLUMN IF NOT EXISTS "casaId" TEXT;'   2>/dev/null || true
+docker exec leg_postgres psql -U legislativo -d legislativo   -c 'UPDATE perfis SET "casaId" = (SELECT id FROM casas_legislativas LIMIT 1) WHERE "casaId" IS NULL;'   2>/dev/null || true
+
+# Aplicar schema (piped com "y" para responder prompt de confirmação se houver)
+printf "y
+" | DATABASE_URL="$DB_URL" npx prisma db push --accept-data-loss 2>&1 | tail -8
 ok "Schema atualizado (CredencialUsuario, SessaoAuth, TokenSeguranca, EventoAuth)"
 
 # 5. Executar seed (Rio Novo do Sul)
