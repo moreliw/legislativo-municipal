@@ -294,7 +294,7 @@ docker run -d \
   --name leg_camunda \
   --network leg-net \
   --restart unless-stopped \
-  -p 8085:8080 \
+  -p 127.0.0.1:18085:8080 \
   camunda/camunda-bpm-platform:run-7.21.0 2>&1 | tail -1
 
 ok "Keycloak e Camunda iniciando em background (~2min)..."

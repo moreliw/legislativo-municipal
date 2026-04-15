@@ -17,27 +17,27 @@ export default function GlobalError({
 
   return (
     <html lang="pt-BR">
-      <body style={{ background: '#0f1117', fontFamily: 'system-ui, sans-serif', margin: 0 }}>
+      <body style={{ background: 'var(--surface-0)', fontFamily: 'system-ui, sans-serif', margin: 0 }}>
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           justifyContent: 'center', minHeight: '100vh', padding: '2rem', textAlign: 'center',
         }}>
           <div style={{
-            width: 56, height: 56, borderRadius: 16, background: '#2e0e0e',
+            width: 56, height: 56, borderRadius: 16, background: 'var(--red-soft)',
             border: '1px solid rgba(217,64,64,0.3)', display: 'flex',
             alignItems: 'center', justifyContent: 'center', marginBottom: 24,
           }}>
-            <AlertTriangle size={24} color="#d94040" />
+            <AlertTriangle size={24} color="var(--red)" />
           </div>
 
-          <h1 style={{ color: '#e8eaf0', fontSize: 22, fontWeight: 600, marginBottom: 8 }}>
+          <h1 style={{ color: 'var(--text-1)', fontSize: 22, fontWeight: 600, marginBottom: 8 }}>
             Algo deu errado
           </h1>
-          <p style={{ color: '#5c6282', fontSize: 14, marginBottom: 8, maxWidth: 400 }}>
+          <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 8, maxWidth: 400 }}>
             Ocorreu um erro inesperado. Nossa equipe foi notificada.
           </p>
           {error.digest && (
-            <p style={{ color: '#5c6282', fontSize: 11, fontFamily: 'monospace', marginBottom: 24 }}>
+            <p style={{ color: 'var(--text-3)', fontSize: 11, fontFamily: 'monospace', marginBottom: 24 }}>
               Código: {error.digest}
             </p>
           )}
@@ -46,7 +46,7 @@ export default function GlobalError({
             onClick={reset}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              background: '#2d7dd2', color: 'white', border: 'none',
+              background: 'var(--blue)', color: 'white', border: 'none',
               borderRadius: 8, padding: '10px 20px', fontSize: 13,
               fontWeight: 500, cursor: 'pointer',
             }}

@@ -50,22 +50,22 @@ export default function PortalPublicoPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[#0f1117]" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+    <div className="min-h-screen bg-surface-0" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
       {/* Header público */}
-      <header className="bg-[#0d1e35] border-b border-[#1e2333]">
+      <header className="bg-brand-blue-soft border-b border-line">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded bg-[#2d7dd2] flex items-center justify-center">
+              <div className="w-7 h-7 rounded bg-brand-blue flex items-center justify-center">
                 <span className="text-white font-bold text-xs">CM</span>
               </div>
-              <span className="text-[15px] font-semibold text-[#e8eaf0]">Câmara Municipal</span>
+              <span className="text-[15px] font-semibold text-fg-1">Câmara Municipal</span>
             </div>
-            <div className="text-[11px] text-[#5c6282] mt-0.5 font-mono">São Francisco · MG — Portal de Transparência</div>
+            <div className="text-[11px] text-fg-3 mt-0.5 font-mono">São Francisco · MG — Portal de Transparência</div>
           </div>
           <a
             href="/login"
-            className="text-[12px] border border-[#1e2333] text-[#9198b0] hover:text-[#e8eaf0] hover:border-[#2a3048] px-3 py-1.5 rounded-md transition-colors"
+            className="text-[12px] border border-line text-fg-2 hover:text-fg-1 hover:border-line-2 px-3 py-1.5 rounded-md transition-colors"
           >
             Acesso Institucional →
           </a>
@@ -73,22 +73,22 @@ export default function PortalPublicoPage() {
       </header>
 
       {/* Hero */}
-      <div className="bg-[#0d1e35] border-b border-[#1e2333] py-10">
+      <div className="bg-brand-blue-soft border-b border-line py-10">
         <div className="max-w-5xl mx-auto px-6">
-          <h1 className="text-[22px] font-semibold text-[#e8eaf0] mb-2">
+          <h1 className="text-[22px] font-semibold text-fg-1 mb-2">
             Publicações Legislativas
           </h1>
-          <p className="text-[14px] text-[#9198b0] mb-6">
+          <p className="text-[14px] text-fg-2 mb-6">
             Consulte as proposições aprovadas, decretos legislativos e publicações oficiais da câmara.
           </p>
           <div className="relative max-w-lg">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5c6282]" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-3" />
             <input
               type="text"
               placeholder="Buscar por número, ementa ou assunto..."
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              className="w-full bg-[#13161f] border border-[#1e2333] rounded-md pl-9 pr-4 py-2.5 text-[13px] text-[#e8eaf0] placeholder:text-[#5c6282] focus:outline-none focus:border-[#2d7dd2] transition-colors"
+              className="w-full bg-surface-1 border border-line rounded-md pl-9 pr-4 py-2.5 text-[13px] text-fg-1 placeholder:text-fg-3 focus:outline-none focus:border-brand-blue transition-colors"
             />
           </div>
         </div>
@@ -103,11 +103,11 @@ export default function PortalPublicoPage() {
             { label: 'Última publicação', value: '20/04/2024', icon: Calendar },
             { label: 'Total de visualizações', value: '1.204', icon: Eye },
           ].map(stat => (
-            <div key={stat.label} className="bg-[#13161f] border border-[#1e2333] rounded-lg p-4 flex items-center gap-3">
-              <stat.icon size={18} className="text-[#2d7dd2] flex-shrink-0" />
+            <div key={stat.label} className="bg-surface-1 border border-line rounded-lg p-4 flex items-center gap-3">
+              <stat.icon size={18} className="text-brand-blue flex-shrink-0" />
               <div>
-                <div className="text-[16px] font-semibold font-mono text-[#e8eaf0]">{stat.value}</div>
-                <div className="text-[11px] text-[#5c6282]">{stat.label}</div>
+                <div className="text-[16px] font-semibold font-mono text-fg-1">{stat.value}</div>
+                <div className="text-[11px] text-fg-3">{stat.label}</div>
               </div>
             </div>
           ))}
@@ -115,7 +115,7 @@ export default function PortalPublicoPage() {
 
         {/* Lista de publicações */}
         <div className="space-y-3">
-          <h2 className="text-[13px] font-semibold text-[#9198b0] uppercase tracking-wider mb-4">
+          <h2 className="text-[13px] font-semibold text-fg-2 uppercase tracking-wider mb-4">
             Publicações Recentes
           </h2>
 
@@ -123,25 +123,25 @@ export default function PortalPublicoPage() {
             <a
               key={pub.id}
               href={pub.url}
-              className="block bg-[#13161f] border border-[#1e2333] rounded-lg p-5 hover:bg-[#1c202e] hover:border-[#2a3048] transition-all group"
+              className="block bg-surface-1 border border-line rounded-lg p-5 hover:bg-surface-2 hover:border-line-2 transition-all group"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-mono text-[12px] font-semibold text-[#2d7dd2]">
+                    <span className="font-mono text-[12px] font-semibold text-brand-blue">
                       {pub.numero}
                     </span>
-                    <span className="text-[10px] font-mono bg-[#0f1117] border border-[#1e2333] text-[#5c6282] px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-mono bg-surface-0 border border-line text-fg-3 px-2 py-0.5 rounded">
                       {pub.tipo}
                     </span>
-                    <span className="text-[10px] bg-[#0a2318] text-[#1fa870] px-2 py-0.5 rounded-full font-medium">
+                    <span className="text-[10px] bg-brand-green-soft text-brand-green px-2 py-0.5 rounded-full font-medium">
                       Publicado
                     </span>
                   </div>
-                  <p className="text-[14px] text-[#e8eaf0] leading-snug group-hover:text-white transition-colors">
+                  <p className="text-[14px] text-fg-1 leading-snug group-hover:text-white transition-colors">
                     {pub.ementa}
                   </p>
-                  <div className="flex items-center gap-3 mt-3 text-[11px] text-[#5c6282]">
+                  <div className="flex items-center gap-3 mt-3 text-[11px] text-fg-3">
                     <span className="flex items-center gap-1">
                       <Calendar size={11} />
                       Publicado em {pub.data}
@@ -150,7 +150,7 @@ export default function PortalPublicoPage() {
                     <span>Diário Oficial Municipal</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 text-[12px] text-[#2d7dd2] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <div className="flex items-center gap-1 text-[12px] text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                   <FileText size={13} />
                   Ver PDF
                 </div>
@@ -159,7 +159,7 @@ export default function PortalPublicoPage() {
           ))}
 
           {filtradas.length === 0 && (
-            <div className="text-center py-12 text-[#5c6282]">
+            <div className="text-center py-12 text-fg-3">
               <Search size={24} className="mx-auto mb-3 opacity-40" />
               <div className="text-[13px]">Nenhuma publicação encontrada para "{busca}"</div>
             </div>
@@ -168,8 +168,8 @@ export default function PortalPublicoPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-[#1e2333] mt-12 py-6">
-        <div className="max-w-5xl mx-auto px-6 text-[11px] text-[#5c6282] flex items-center justify-between">
+      <footer className="border-t border-line mt-12 py-6">
+        <div className="max-w-5xl mx-auto px-6 text-[11px] text-fg-3 flex items-center justify-between">
           <span>Câmara Municipal de São Francisco · MG — Sistema Legislativo Municipal</span>
           <span>Dados abertos conforme Lei 12.527/2011 (LAI)</span>
         </div>

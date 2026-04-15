@@ -41,12 +41,12 @@ const tarefasPendentes = [
 ]
 
 const perfilConfig: Record<string, string> = {
-  PROCURADORIA: 'text-[#b09de0]',
-  COMISSAO_PERMANENTE: 'text-[#2d7dd2]',
-  PROTOCOLO: 'text-[#9198b0]',
-  PUBLICACAO: 'text-[#1fa870]',
-  MESA_DIRETORA: 'text-[#e8a020]',
-  PRESIDENCIA: 'text-[#e8a020]',
+  PROCURADORIA: 'text-brand-purple',
+  COMISSAO_PERMANENTE: 'text-brand-blue',
+  PROTOCOLO: 'text-fg-2',
+  PUBLICACAO: 'text-brand-green',
+  MESA_DIRETORA: 'text-brand-amber',
+  PRESIDENCIA: 'text-brand-amber',
 }
 
 export default function ProcessosPage() {
@@ -65,24 +65,24 @@ export default function ProcessosPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[#e8eaf0]">Motor de Processos</h1>
-          <p className="text-[13px] text-[#5c6282] mt-0.5">Monitoramento de instâncias Camunda em tempo real</p>
+          <h1 className="text-xl font-semibold text-fg-1">Motor de Processos</h1>
+          <p className="text-[13px] text-fg-3 mt-0.5">Monitoramento de instâncias Camunda em tempo real</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-[12px] text-[#1fa870]">
-            <div className="w-2 h-2 rounded-full bg-[#1fa870] animate-pulse" />
+          <div className="flex items-center gap-2 text-[12px] text-brand-green">
+            <div className="w-2 h-2 rounded-full bg-brand-green animate-pulse" />
             Camunda conectado
           </div>
           <button
             onClick={simularAtualizar}
-            className={`flex items-center gap-1.5 text-[12px] border border-[#1e2333] text-[#9198b0] hover:text-[#e8eaf0] px-3 py-1.5 rounded-md transition-colors ${atualizando ? 'opacity-50' : ''}`}
+            className={`flex items-center gap-1.5 text-[12px] border border-line text-fg-2 hover:text-fg-1 px-3 py-1.5 rounded-md transition-colors ${atualizando ? 'opacity-50' : ''}`}
           >
             <RefreshCw size={12} className={atualizando ? 'animate-spin' : ''} />
             Atualizar
           </button>
           <Link
             href="/admin/fluxos"
-            className="flex items-center gap-1.5 text-[12px] bg-[#2d7dd2] hover:bg-[#1e6fbf] text-white px-3 py-1.5 rounded-md transition-colors"
+            className="flex items-center gap-1.5 text-[12px] bg-brand-blue hover:bg-brand-blue-2 text-white px-3 py-1.5 rounded-md transition-colors"
           >
             <GitBranch size={12} />
             Gerenciar Fluxos
@@ -93,20 +93,20 @@ export default function ProcessosPage() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'Instâncias ativas', value: instanciasMock.length, color: 'text-[#2d7dd2]', bg: 'bg-[#0d1e35]' },
-          { label: 'Tarefas pendentes', value: tarefasPendentes.length, color: 'text-[#e8a020]', bg: 'bg-[#2e1f06]' },
-          { label: 'Vencidas', value: vencidas, color: vencidas > 0 ? 'text-[#d94040]' : 'text-[#1fa870]', bg: vencidas > 0 ? 'bg-[#2e0e0e]' : 'bg-[#0a2318]' },
-          { label: 'Fluxos ativos', value: 3, color: 'text-[#1fa870]', bg: 'bg-[#0a2318]' },
+          { label: 'Instâncias ativas', value: instanciasMock.length, color: 'text-brand-blue', bg: 'bg-brand-blue-soft' },
+          { label: 'Tarefas pendentes', value: tarefasPendentes.length, color: 'text-brand-amber', bg: 'bg-brand-amber-soft' },
+          { label: 'Vencidas', value: vencidas, color: vencidas > 0 ? 'text-brand-red' : 'text-brand-green', bg: vencidas > 0 ? 'bg-brand-red-soft' : 'bg-brand-green-soft' },
+          { label: 'Fluxos ativos', value: 3, color: 'text-brand-green', bg: 'bg-brand-green-soft' },
         ].map(s => (
-          <div key={s.label} className={`${s.bg} border border-[#1e2333] rounded-lg p-4`}>
+          <div key={s.label} className={`${s.bg} border border-line rounded-lg p-4`}>
             <div className={`text-[26px] font-bold font-mono ${s.color}`}>{s.value}</div>
-            <div className="text-[11px] text-[#5c6282] mt-0.5">{s.label}</div>
+            <div className="text-[11px] text-fg-3 mt-0.5">{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-[#1e2333]">
+      <div className="border-b border-line">
         <div className="flex gap-0">
           {[
             { id: 'instancias', label: `Instâncias (${instanciasMock.length})` },
@@ -118,8 +118,8 @@ export default function ProcessosPage() {
               onClick={() => setAbaAtiva(t.id as typeof abaAtiva)}
               className={`px-5 py-3 text-[13px] font-medium border-b-2 transition-colors ${
                 abaAtiva === t.id
-                  ? 'border-[#2d7dd2] text-[#2d7dd2]'
-                  : 'border-transparent text-[#5c6282] hover:text-[#9198b0]'
+                  ? 'border-brand-blue text-brand-blue'
+                  : 'border-transparent text-fg-3 hover:text-fg-2'
               }`}
             >
               {t.label}
@@ -132,39 +132,39 @@ export default function ProcessosPage() {
       {abaAtiva === 'instancias' && (
         <div className="space-y-2">
           {instanciasMock.map(inst => (
-            <div key={inst.id} className={`bg-[#13161f] border rounded-lg px-5 py-3.5 flex items-center gap-4 ${
-              inst.vencido ? 'border-[#d94040]/40' : 'border-[#1e2333]'
+            <div key={inst.id} className={`bg-surface-1 border rounded-lg px-5 py-3.5 flex items-center gap-4 ${
+              inst.vencido ? 'border-brand-red/40' : 'border-line'
             }`}>
               <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                inst.vencido ? 'bg-[#d94040]' : 'bg-[#1fa870] animate-pulse'
+                inst.vencido ? 'bg-brand-red' : 'bg-brand-green animate-pulse'
               }`} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-0.5">
-                  <span className="font-mono text-[13px] font-semibold text-[#2d7dd2]">{inst.proposicaoNumero}</span>
-                  <span className="text-[10px] bg-[#1c202e] text-[#9198b0] px-2 py-0.5 rounded-full">{inst.fluxo}</span>
+                  <span className="font-mono text-[13px] font-semibold text-brand-blue">{inst.proposicaoNumero}</span>
+                  <span className="text-[10px] bg-surface-2 text-fg-2 px-2 py-0.5 rounded-full">{inst.fluxo}</span>
                 </div>
-                <div className="flex items-center gap-4 text-[12px] text-[#9198b0]">
+                <div className="flex items-center gap-4 text-[12px] text-fg-2">
                   <span className="flex items-center gap-1">
-                    <Play size={10} className="text-[#2d7dd2]" />
+                    <Play size={10} className="text-brand-blue" />
                     {inst.etapaLabel}
                   </span>
-                  <span className="text-[#5c6282]">Responsável: <span className="font-mono text-[#9198b0]">{inst.responsavel}</span></span>
-                  <span className="flex items-center gap-1 text-[#5c6282]">
+                  <span className="text-fg-3">Responsável: <span className="font-mono text-fg-2">{inst.responsavel}</span></span>
+                  <span className="flex items-center gap-1 text-fg-3">
                     <Clock size={10} /> {inst.duracao}
                   </span>
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <div className={`text-[12px] font-mono ${inst.vencido ? 'text-[#d94040]' : 'text-[#9198b0]'}`}>
+                <div className={`text-[12px] font-mono ${inst.vencido ? 'text-brand-red' : 'text-fg-2'}`}>
                   {inst.vencido && '⚠ '}Prazo: {inst.prazo}
                 </div>
                 {inst.vencido && (
-                  <div className="text-[10px] text-[#d94040]">Vencido</div>
+                  <div className="text-[10px] text-brand-red">Vencido</div>
                 )}
               </div>
               <Link
                 href={`/proposicoes/${inst.id}/tramitacao`}
-                className="text-[#5c6282] hover:text-[#9198b0] transition-colors flex-shrink-0"
+                className="text-fg-3 hover:text-fg-2 transition-colors flex-shrink-0"
               >
                 <ChevronRight size={15} />
               </Link>
@@ -177,19 +177,19 @@ export default function ProcessosPage() {
       {abaAtiva === 'tarefas' && (
         <div className="space-y-2">
           {tarefasPendentes.map(tarefa => (
-            <div key={tarefa.id} className="bg-[#13161f] border border-[#1e2333] rounded-lg px-5 py-3.5 flex items-center gap-4 hover:bg-[#1c202e] transition-colors">
+            <div key={tarefa.id} className="bg-surface-1 border border-line rounded-lg px-5 py-3.5 flex items-center gap-4 hover:bg-surface-2 transition-colors">
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-medium text-[#e8eaf0]">{tarefa.nome}</div>
+                <div className="text-[13px] font-medium text-fg-1">{tarefa.nome}</div>
                 <div className="flex items-center gap-3 mt-1 text-[11px]">
-                  <span className="font-mono text-[#2d7dd2]">{tarefa.proposicao}</span>
-                  <span className={`${perfilConfig[tarefa.perfil] ?? 'text-[#9198b0]'}`}>{tarefa.perfil.replace(/_/g, ' ')}</span>
-                  <span className="text-[#5c6282]">Aberta em {tarefa.criada}</span>
+                  <span className="font-mono text-brand-blue">{tarefa.proposicao}</span>
+                  <span className={`${perfilConfig[tarefa.perfil] ?? 'text-fg-2'}`}>{tarefa.perfil.replace(/_/g, ' ')}</span>
+                  <span className="text-fg-3">Aberta em {tarefa.criada}</span>
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <div className="text-[12px] text-[#9198b0]">Prazo: <span className="font-mono">{tarefa.prazo}</span></div>
+                <div className="text-[12px] text-fg-2">Prazo: <span className="font-mono">{tarefa.prazo}</span></div>
               </div>
-              <button className="text-[12px] border border-[#1e2333] text-[#9198b0] hover:border-[#2d7dd2] hover:text-[#2d7dd2] px-3 py-1.5 rounded-md transition-colors flex-shrink-0">
+              <button className="text-[12px] border border-line text-fg-2 hover:border-brand-blue hover:text-brand-blue px-3 py-1.5 rounded-md transition-colors flex-shrink-0">
                 Assumir
               </button>
             </div>
@@ -205,19 +205,19 @@ export default function ProcessosPage() {
             { key: 'tramitacao_urgente', nome: 'Tramitação Urgente', versao: 1, instancias: 2 },
             { key: 'tramitacao_moc_req', nome: 'Moção / Requerimento', versao: 2, instancias: 7 },
           ].map(def => (
-            <div key={def.key} className="bg-[#13161f] border border-[#1e2333] rounded-lg px-5 py-4 flex items-center gap-4">
-              <GitBranch size={16} className="text-[#2d7dd2] flex-shrink-0" />
+            <div key={def.key} className="bg-surface-1 border border-line rounded-lg px-5 py-4 flex items-center gap-4">
+              <GitBranch size={16} className="text-brand-blue flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-medium text-[#e8eaf0]">{def.nome}</div>
-                <div className="text-[11px] text-[#5c6282] font-mono mt-0.5">{def.key}</div>
+                <div className="text-[13px] font-medium text-fg-1">{def.nome}</div>
+                <div className="text-[11px] text-fg-3 font-mono mt-0.5">{def.key}</div>
               </div>
-              <div className="text-[12px] text-[#9198b0]">v{def.versao}</div>
-              <div className="flex items-center gap-1 text-[12px] text-[#1fa870]">
+              <div className="text-[12px] text-fg-2">v{def.versao}</div>
+              <div className="flex items-center gap-1 text-[12px] text-brand-green">
                 <Play size={11} /> {def.instancias} ativas
               </div>
               <Link
                 href="/admin/fluxos"
-                className="text-[11px] border border-[#1e2333] text-[#9198b0] hover:text-[#e8eaf0] px-3 py-1.5 rounded-md transition-colors"
+                className="text-[11px] border border-line text-fg-2 hover:text-fg-1 px-3 py-1.5 rounded-md transition-colors"
               >
                 Gerenciar
               </Link>

@@ -137,22 +137,22 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
     })
   }
 
-  const inputClass = "bg-[#0f1117] border border-[#1e2333] rounded px-2.5 py-1.5 text-[12px] text-[#e8eaf0] focus:outline-none focus:border-[#2d7dd2] transition-colors"
+  const inputClass = "bg-surface-0 border border-line rounded px-2.5 py-1.5 text-[12px] text-fg-1 focus:outline-none focus:border-brand-blue transition-colors"
   const selectClass = `${inputClass} cursor-pointer`
 
   const tiposRegra: TipoRegra[] = ['ROTEAMENTO', 'VALIDACAO', 'PRAZO', 'NOTIFICACAO', 'BLOQUEIO', 'QUORUM']
   const tipoCorMap: Record<TipoRegra, string> = {
-    ROTEAMENTO: 'text-[#2d7dd2]', VALIDACAO: 'text-[#b09de0]',
-    PRAZO: 'text-[#e8a020]', NOTIFICACAO: 'text-[#9198b0]',
-    BLOQUEIO: 'text-[#d94040]', QUORUM: 'text-[#1fa870]',
+    ROTEAMENTO: 'text-brand-blue', VALIDACAO: 'text-brand-purple',
+    PRAZO: 'text-brand-amber', NOTIFICACAO: 'text-fg-2',
+    BLOQUEIO: 'text-brand-red', QUORUM: 'text-brand-green',
   }
 
   return (
-    <div className="bg-[#13161f] border border-[#1e2333] rounded-xl p-6 space-y-6">
+    <div className="bg-surface-1 border border-line rounded-xl p-6 space-y-6">
       {/* Cabeçalho */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-[11px] font-medium text-[#9198b0] block mb-1.5">Nome da regra *</label>
+          <label className="text-[11px] font-medium text-fg-2 block mb-1.5">Nome da regra *</label>
           <input
             type="text"
             value={nome}
@@ -162,7 +162,7 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
           />
         </div>
         <div>
-          <label className="text-[11px] font-medium text-[#9198b0] block mb-1.5">Tipo</label>
+          <label className="text-[11px] font-medium text-fg-2 block mb-1.5">Tipo</label>
           <select value={tipo} onChange={e => setTipo(e.target.value as TipoRegra)} className={`w-full ${selectClass}`}>
             {tiposRegra.map(t => (
               <option key={t} value={t}>{t}</option>
@@ -175,12 +175,12 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold bg-[#0d1e35] text-[#2d7dd2] px-2 py-0.5 rounded">SE</span>
-            <span className="text-[12px] text-[#5c6282]">Todas as condições são verdadeiras:</span>
+            <span className="text-[11px] font-bold bg-brand-blue-soft text-brand-blue px-2 py-0.5 rounded">SE</span>
+            <span className="text-[12px] text-fg-3">Todas as condições são verdadeiras:</span>
           </div>
           <button
             onClick={adicionarCondicao}
-            className="flex items-center gap-1 text-[11px] text-[#2d7dd2] hover:underline"
+            className="flex items-center gap-1 text-[11px] text-brand-blue hover:underline"
           >
             <Plus size={11} /> Adicionar
           </button>
@@ -193,9 +193,9 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
             const ops = operadoresPorTipo[tipoCampo]
 
             return (
-              <div key={c.id} className="flex items-center gap-2 bg-[#0f1117] border border-[#1e2333] rounded-lg px-3 py-2">
+              <div key={c.id} className="flex items-center gap-2 bg-surface-0 border border-line rounded-lg px-3 py-2">
                 {i > 0 && (
-                  <span className="text-[10px] text-[#5c6282] w-8 text-right flex-shrink-0">E</span>
+                  <span className="text-[10px] text-fg-3 w-8 text-right flex-shrink-0">E</span>
                 )}
                 {i === 0 && <span className="w-8 flex-shrink-0" />}
 
@@ -229,7 +229,7 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
 
                 <button
                   onClick={() => removerCondicao(c.id)}
-                  className="text-[#5c6282] hover:text-[#d94040] transition-colors flex-shrink-0"
+                  className="text-fg-3 hover:text-brand-red transition-colors flex-shrink-0"
                 >
                   <Trash2 size={13} />
                 </button>
@@ -238,7 +238,7 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
           })}
 
           {condicoes.length === 0 && (
-            <div className="text-[12px] text-[#5c6282] bg-[#0f1117] border border-dashed border-[#1e2333] rounded-lg px-4 py-3 text-center">
+            <div className="text-[12px] text-fg-3 bg-surface-0 border border-dashed border-line rounded-lg px-4 py-3 text-center">
               Nenhuma condição. A regra sempre será aplicada.
             </div>
           )}
@@ -249,12 +249,12 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold bg-[#0a2318] text-[#1fa870] px-2 py-0.5 rounded">ENTÃO</span>
-            <span className="text-[12px] text-[#5c6282]">Execute as ações:</span>
+            <span className="text-[11px] font-bold bg-brand-green-soft text-brand-green px-2 py-0.5 rounded">ENTÃO</span>
+            <span className="text-[12px] text-fg-3">Execute as ações:</span>
           </div>
           <button
             onClick={adicionarAcao}
-            className="flex items-center gap-1 text-[11px] text-[#1fa870] hover:underline"
+            className="flex items-center gap-1 text-[11px] text-brand-green hover:underline"
           >
             <Plus size={11} /> Adicionar
           </button>
@@ -262,7 +262,7 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
 
         <div className="space-y-2">
           {acoes.map(a => (
-            <div key={a.id} className="flex items-center gap-2 bg-[#0f1117] border border-[#1e2333] rounded-lg px-3 py-2">
+            <div key={a.id} className="flex items-center gap-2 bg-surface-0 border border-line rounded-lg px-3 py-2">
               <select
                 value={a.tipo}
                 onChange={e => atualizarAcao(a.id, 'tipo', e.target.value)}
@@ -281,7 +281,7 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
                 className={`w-28 ${inputClass}`}
               />
 
-              <span className="text-[#5c6282] text-[11px]">=</span>
+              <span className="text-fg-3 text-[11px]">=</span>
 
               <input
                 type="text"
@@ -293,7 +293,7 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
 
               <button
                 onClick={() => removerAcao(a.id)}
-                className="text-[#5c6282] hover:text-[#d94040] transition-colors flex-shrink-0"
+                className="text-fg-3 hover:text-brand-red transition-colors flex-shrink-0"
               >
                 <Trash2 size={13} />
               </button>
@@ -304,8 +304,8 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
 
       {/* Preview JSON */}
       <div>
-        <div className="text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider mb-2">Preview JSON</div>
-        <pre className="bg-[#0f1117] border border-[#1e2333] rounded-lg p-3 text-[11px] font-mono text-[#9198b0] overflow-x-auto max-h-32">
+        <div className="text-[11px] font-semibold text-fg-3 uppercase tracking-wider mb-2">Preview JSON</div>
+        <pre className="bg-surface-0 border border-line rounded-lg p-3 text-[11px] font-mono text-fg-2 overflow-x-auto max-h-32">
           {JSON.stringify({
             nome,
             tipo,
@@ -319,8 +319,8 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
       {resultadoTeste && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-lg border text-[12px] ${
           resultadoTeste.startsWith('✓')
-            ? 'bg-[#0a2318] border-[#1fa870]/30 text-[#1fa870]'
-            : 'bg-[#2e0e0e] border-[#d94040]/30 text-[#e07070]'
+            ? 'bg-brand-green-soft border-brand-green/30 text-brand-green'
+            : 'bg-brand-red-soft border-brand-red/30 text-brand-red'
         }`}>
           <AlertCircle size={13} />
           {resultadoTeste}
@@ -328,11 +328,11 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
       )}
 
       {/* Ações */}
-      <div className="flex items-center gap-3 pt-2 border-t border-[#1e2333]">
+      <div className="flex items-center gap-3 pt-2 border-t border-line">
         <button
           onClick={simularTeste}
           disabled={testando}
-          className="flex items-center gap-1.5 text-[12px] border border-[#1e2333] text-[#9198b0] hover:border-[#2a3048] hover:text-[#e8eaf0] px-3 py-2 rounded-md transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 text-[12px] border border-line text-fg-2 hover:border-line-2 hover:text-fg-1 px-3 py-2 rounded-md transition-colors disabled:opacity-50"
         >
           <Play size={12} className={testando ? 'animate-spin' : ''} />
           {testando ? 'Testando...' : 'Testar regra'}
@@ -340,7 +340,7 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
         {onCancelar && (
           <button
             onClick={onCancelar}
-            className="text-[12px] text-[#5c6282] hover:text-[#9198b0] px-3 py-2 transition-colors"
+            className="text-[12px] text-fg-3 hover:text-fg-2 px-3 py-2 transition-colors"
           >
             Cancelar
           </button>
@@ -348,7 +348,7 @@ export default function RuleBuilder({ regraInicial, onSalvar, onCancelar }: Rule
         <button
           onClick={handleSalvar}
           disabled={!nome.trim()}
-          className="ml-auto flex items-center gap-1.5 text-[12px] bg-[#2d7dd2] hover:bg-[#1e6fbf] text-white font-medium px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="ml-auto flex items-center gap-1.5 text-[12px] bg-brand-blue hover:bg-brand-blue-2 text-white font-medium px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save size={13} />
           Salvar Regra

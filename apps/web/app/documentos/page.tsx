@@ -63,24 +63,24 @@ const tipoLabel: Record<string, string> = {
 }
 
 const tipoIconColor: Record<string, { bg: string; text: string; abbr: string }> = {
-  TEXTO_PRINCIPAL:  { bg: 'bg-[#0d1e35]', text: 'text-[#2d7dd2]', abbr: 'TXT' },
-  PARECER_JURIDICO: { bg: 'bg-[#1a1030]', text: 'text-[#b09de0]', abbr: 'PJU' },
-  PARECER_COMISSAO: { bg: 'bg-[#1a1030]', text: 'text-[#9178e0]', abbr: 'PCM' },
-  ATA:              { bg: 'bg-[#0a2318]', text: 'text-[#1fa870]', abbr: 'ATA' },
-  OFICIO:           { bg: 'bg-[#1c202e]', text: 'text-[#9198b0]', abbr: 'OFC' },
-  DESPACHO:         { bg: 'bg-[#2e1f06]', text: 'text-[#e8a020]', abbr: 'DSP' },
-  CONVOCACAO:       { bg: 'bg-[#0d1e35]', text: 'text-[#2d7dd2]', abbr: 'CNV' },
-  PAUTA:            { bg: 'bg-[#2e1f06]', text: 'text-[#e8a020]', abbr: 'PAU' },
-  COMPROVANTE:      { bg: 'bg-[#1c202e]', text: 'text-[#9198b0]', abbr: 'REC' },
+  TEXTO_PRINCIPAL:  { bg: 'bg-brand-blue-soft', text: 'text-brand-blue', abbr: 'TXT' },
+  PARECER_JURIDICO: { bg: 'bg-brand-purple-soft', text: 'text-brand-purple', abbr: 'PJU' },
+  PARECER_COMISSAO: { bg: 'bg-brand-purple-soft', text: 'text-brand-purple', abbr: 'PCM' },
+  ATA:              { bg: 'bg-brand-green-soft', text: 'text-brand-green', abbr: 'ATA' },
+  OFICIO:           { bg: 'bg-surface-2', text: 'text-fg-2', abbr: 'OFC' },
+  DESPACHO:         { bg: 'bg-brand-amber-soft', text: 'text-brand-amber', abbr: 'DSP' },
+  CONVOCACAO:       { bg: 'bg-brand-blue-soft', text: 'text-brand-blue', abbr: 'CNV' },
+  PAUTA:            { bg: 'bg-brand-amber-soft', text: 'text-brand-amber', abbr: 'PAU' },
+  COMPROVANTE:      { bg: 'bg-surface-2', text: 'text-fg-2', abbr: 'REC' },
 }
 
 const statusConfig: Record<string, { label: string; text: string }> = {
-  RASCUNHO:   { label: 'Rascunho',   text: 'text-[#5c6282]' },
-  REVISAO:    { label: 'Em revisão', text: 'text-[#e8a020]' },
-  APROVADO:   { label: 'Aprovado',   text: 'text-[#2d7dd2]' },
-  PROTOCOLADO:{ label: 'Protocolado',text: 'text-[#2d7dd2]' },
-  PUBLICADO:  { label: 'Publicado',  text: 'text-[#1fa870]' },
-  ARQUIVADO:  { label: 'Arquivado',  text: 'text-[#5c6282]' },
+  RASCUNHO:   { label: 'Rascunho',   text: 'text-fg-3' },
+  REVISAO:    { label: 'Em revisão', text: 'text-brand-amber' },
+  APROVADO:   { label: 'Aprovado',   text: 'text-brand-blue' },
+  PROTOCOLADO:{ label: 'Protocolado',text: 'text-brand-blue' },
+  PUBLICADO:  { label: 'Publicado',  text: 'text-brand-green' },
+  ARQUIVADO:  { label: 'Arquivado',  text: 'text-fg-3' },
 }
 
 function formatBytes(bytes: number): string {
@@ -111,12 +111,12 @@ export default function DocumentosPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[#e8eaf0]">Documentos</h1>
-          <p className="text-[13px] text-[#5c6282] mt-0.5">{filtrados.length} documento{filtrados.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-xl font-semibold text-fg-1">Documentos</h1>
+          <p className="text-[13px] text-fg-3 mt-0.5">{filtrados.length} documento{filtrados.length !== 1 ? 's' : ''}</p>
         </div>
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 bg-[#2d7dd2] hover:bg-[#1e6fbf] text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors"
+          className="flex items-center gap-2 bg-brand-blue hover:bg-brand-blue-2 text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors"
         >
           <Upload size={14} />
           Upload
@@ -130,34 +130,34 @@ export default function DocumentosPage() {
         onDragLeave={() => setDragging(false)}
         onDrop={e => { e.preventDefault(); setDragging(false) }}
         className={`border-2 border-dashed rounded-lg py-6 text-center transition-colors cursor-pointer ${
-          dragging ? 'border-[#2d7dd2] bg-[#0d1e35]' : 'border-[#1e2333] hover:border-[#2a3048]'
+          dragging ? 'border-brand-blue bg-brand-blue-soft' : 'border-line hover:border-line-2'
         }`}
         onClick={() => fileInputRef.current?.click()}
       >
-        <Upload size={20} className="mx-auto text-[#5c6282] mb-2" />
-        <div className="text-[13px] text-[#5c6282]">
-          Arraste arquivos aqui ou <span className="text-[#2d7dd2] hover:underline">clique para selecionar</span>
+        <Upload size={20} className="mx-auto text-fg-3 mb-2" />
+        <div className="text-[13px] text-fg-3">
+          Arraste arquivos aqui ou <span className="text-brand-blue hover:underline">clique para selecionar</span>
         </div>
-        <div className="text-[11px] text-[#5c6282] mt-1">PDF, DOCX, DOC — Máx. 50MB</div>
+        <div className="text-[11px] text-fg-3 mt-1">PDF, DOCX, DOC — Máx. 50MB</div>
       </div>
 
       {/* Filtros */}
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-48">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5c6282]" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-3" />
           <input
             type="text"
             placeholder="Buscar por nome ou número..."
             value={busca}
             onChange={e => setBusca(e.target.value)}
-            className="w-full bg-[#13161f] border border-[#1e2333] rounded-md pl-8 pr-3 py-2 text-[13px] text-[#e8eaf0] placeholder:text-[#5c6282] focus:outline-none focus:border-[#2d7dd2] transition-colors"
+            className="w-full bg-surface-1 border border-line rounded-md pl-8 pr-3 py-2 text-[13px] text-fg-1 placeholder:text-fg-3 focus:outline-none focus:border-brand-blue transition-colors"
           />
         </div>
 
         <select
           value={tipoFiltro}
           onChange={e => setTipoFiltro(e.target.value)}
-          className="bg-[#13161f] border border-[#1e2333] rounded-md px-3 py-2 text-[13px] text-[#9198b0] focus:outline-none focus:border-[#2d7dd2] transition-colors"
+          className="bg-surface-1 border border-line rounded-md px-3 py-2 text-[13px] text-fg-2 focus:outline-none focus:border-brand-blue transition-colors"
         >
           <option value="">Todos os tipos</option>
           {tiposUnicos.map(t => (
@@ -168,7 +168,7 @@ export default function DocumentosPage() {
         <select
           value={statusFiltro}
           onChange={e => setStatusFiltro(e.target.value)}
-          className="bg-[#13161f] border border-[#1e2333] rounded-md px-3 py-2 text-[13px] text-[#9198b0] focus:outline-none focus:border-[#2d7dd2] transition-colors"
+          className="bg-surface-1 border border-line rounded-md px-3 py-2 text-[13px] text-fg-2 focus:outline-none focus:border-brand-blue transition-colors"
         >
           <option value="">Todos os status</option>
           {Object.entries(statusConfig).map(([v, c]) => (
@@ -178,44 +178,44 @@ export default function DocumentosPage() {
       </div>
 
       {/* Lista de documentos */}
-      <div className="bg-[#13161f] border border-[#1e2333] rounded-lg overflow-hidden">
+      <div className="bg-surface-1 border border-line rounded-lg overflow-hidden">
         <table className="w-full text-[13px]">
           <thead>
-            <tr className="border-b border-[#1e2333] bg-[#0f1117]">
-              <th className="text-left px-5 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider">Documento</th>
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-36">Proposição</th>
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-28">Status</th>
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-20">Tamanho</th>
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-32">Data</th>
+            <tr className="border-b border-line bg-surface-0">
+              <th className="text-left px-5 py-3 text-[11px] font-semibold text-fg-3 uppercase tracking-wider">Documento</th>
+              <th className="text-left px-4 py-3 text-[11px] font-semibold text-fg-3 uppercase tracking-wider w-36">Proposição</th>
+              <th className="text-left px-4 py-3 text-[11px] font-semibold text-fg-3 uppercase tracking-wider w-28">Status</th>
+              <th className="text-left px-4 py-3 text-[11px] font-semibold text-fg-3 uppercase tracking-wider w-20">Tamanho</th>
+              <th className="text-left px-4 py-3 text-[11px] font-semibold text-fg-3 uppercase tracking-wider w-32">Data</th>
               <th className="w-28"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#1e2333]">
+          <tbody className="divide-y divide-line">
             {filtrados.map(doc => {
-              const ic = tipoIconColor[doc.tipo] ?? { bg: 'bg-[#1c202e]', text: 'text-[#9198b0]', abbr: 'DOC' }
-              const sc = statusConfig[doc.status] ?? { label: doc.status, text: 'text-[#9198b0]' }
+              const ic = tipoIconColor[doc.tipo] ?? { bg: 'bg-surface-2', text: 'text-fg-2', abbr: 'DOC' }
+              const sc = statusConfig[doc.status] ?? { label: doc.status, text: 'text-fg-2' }
               return (
-                <tr key={doc.id} className="hover:bg-[#1c202e] transition-colors group">
+                <tr key={doc.id} className="hover:bg-surface-2 transition-colors group">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-md flex items-center justify-center text-[10px] font-bold font-mono flex-shrink-0 ${ic.bg} ${ic.text}`}>
                         {ic.abbr}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-[13px] font-medium text-[#e8eaf0] truncate">{doc.nome}</div>
+                        <div className="text-[13px] font-medium text-fg-1 truncate">{doc.nome}</div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[11px] text-[#5c6282]">{tipoLabel[doc.tipo] ?? doc.tipo}</span>
+                          <span className="text-[11px] text-fg-3">{tipoLabel[doc.tipo] ?? doc.tipo}</span>
                           {doc.versaoAtual > 1 && (
-                            <span className="text-[10px] font-mono text-[#5c6282]">v{doc.versaoAtual}</span>
+                            <span className="text-[10px] font-mono text-fg-3">v{doc.versaoAtual}</span>
                           )}
                           {doc.assinaturas.length > 0 && (
-                            <span className="flex items-center gap-0.5 text-[10px] text-[#1fa870]">
+                            <span className="flex items-center gap-0.5 text-[10px] text-brand-green">
                               <CheckCircle size={9} /> {doc.assinaturas.length} assinatura{doc.assinaturas.length !== 1 ? 's' : ''}
                             </span>
                           )}
                           {doc.publico
-                            ? <Globe size={10} className="text-[#5c6282]" title="Público" />
-                            : <Lock size={10} className="text-[#5c6282]" title="Restrito" />
+                            ? <Globe size={10} className="text-fg-3" title="Público" />
+                            : <Lock size={10} className="text-fg-3" title="Restrito" />
                           }
                         </div>
                       </div>
@@ -223,28 +223,28 @@ export default function DocumentosPage() {
                   </td>
                   <td className="px-4 py-3.5">
                     {doc.proposicaoNumero
-                      ? <span className="font-mono text-[12px] text-[#2d7dd2]">{doc.proposicaoNumero}</span>
-                      : <span className="text-[12px] text-[#5c6282]">—</span>
+                      ? <span className="font-mono text-[12px] text-brand-blue">{doc.proposicaoNumero}</span>
+                      : <span className="text-[12px] text-fg-3">—</span>
                     }
                   </td>
                   <td className="px-4 py-3.5">
                     <span className={`text-[12px] ${sc.text}`}>{sc.label}</span>
                   </td>
-                  <td className="px-4 py-3.5 text-[12px] text-[#5c6282] font-mono">
+                  <td className="px-4 py-3.5 text-[12px] text-fg-3 font-mono">
                     {formatBytes(doc.tamanho)}
                   </td>
-                  <td className="px-4 py-3.5 text-[11px] text-[#5c6282] font-mono">
+                  <td className="px-4 py-3.5 text-[11px] text-fg-3 font-mono">
                     {doc.criadoEm}
                   </td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="w-7 h-7 flex items-center justify-center text-[#5c6282] hover:text-[#9198b0] transition-colors rounded hover:bg-[#252a3a]" title="Visualizar">
+                      <button className="w-7 h-7 flex items-center justify-center text-fg-3 hover:text-fg-2 transition-colors rounded hover:bg-surface-3" title="Visualizar">
                         <Eye size={13} />
                       </button>
-                      <button className="w-7 h-7 flex items-center justify-center text-[#5c6282] hover:text-[#9198b0] transition-colors rounded hover:bg-[#252a3a]" title="Baixar">
+                      <button className="w-7 h-7 flex items-center justify-center text-fg-3 hover:text-fg-2 transition-colors rounded hover:bg-surface-3" title="Baixar">
                         <Download size={13} />
                       </button>
-                      <button className="w-7 h-7 flex items-center justify-center text-[#5c6282] hover:text-[#9198b0] transition-colors rounded hover:bg-[#252a3a]" title="Mais ações">
+                      <button className="w-7 h-7 flex items-center justify-center text-fg-3 hover:text-fg-2 transition-colors rounded hover:bg-surface-3" title="Mais ações">
                         <MoreHorizontal size={13} />
                       </button>
                     </div>
@@ -256,7 +256,7 @@ export default function DocumentosPage() {
         </table>
 
         {filtrados.length === 0 && (
-          <div className="py-16 text-center text-[#5c6282] text-[13px]">
+          <div className="py-16 text-center text-fg-3 text-[13px]">
             Nenhum documento encontrado com os filtros selecionados.
           </div>
         )}

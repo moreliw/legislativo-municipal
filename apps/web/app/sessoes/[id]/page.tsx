@@ -83,11 +83,11 @@ const tipoPautaLabel: Record<string, string> = {
 }
 
 const situacaoConfig: Record<string, { text: string; dot: string }> = {
-  PENDENTE: { text: 'text-[#5c6282]', dot: '#5c6282' },
-  LIDO: { text: 'text-[#2d7dd2]', dot: '#2d7dd2' },
-  DISCUTIDO: { text: 'text-[#e8a020]', dot: '#e8a020' },
-  VOTADO: { text: 'text-[#1fa870]', dot: '#1fa870' },
-  RETIRADO: { text: 'text-[#d94040]', dot: '#d94040' },
+  PENDENTE: { text: 'text-fg-3', dot: 'var(--text-3)' },
+  LIDO: { text: 'text-brand-blue', dot: 'var(--blue)' },
+  DISCUTIDO: { text: 'text-brand-amber', dot: 'var(--amber)' },
+  VOTADO: { text: 'text-brand-green', dot: 'var(--green)' },
+  RETIRADO: { text: 'text-brand-red', dot: 'var(--red)' },
 }
 
 type VotoTipo = 'SIM' | 'NAO' | 'ABSTENCAO' | 'AUSENTE' | null
@@ -117,21 +117,21 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
     <div className="p-6 space-y-5 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-start gap-4">
-        <Link href="/sessoes" className="mt-1 text-[#5c6282] hover:text-[#9198b0] transition-colors">
+        <Link href="/sessoes" className="mt-1 text-fg-3 hover:text-fg-2 transition-colors">
           <ArrowLeft size={17} />
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold text-[#e8eaf0]">
+            <h1 className="text-xl font-semibold text-fg-1">
               Sessão {sessaoMock.tipo === 'ORDINARIA' ? 'Ordinária' : 'Extraordinária'} {sessaoMock.numero}
             </h1>
             <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full ${
-              sessaoAberta ? 'bg-[#0a2318] text-[#1fa870]' : 'bg-[#0d1e35] text-[#2d7dd2]'
+              sessaoAberta ? 'bg-brand-green-soft text-brand-green' : 'bg-brand-blue-soft text-brand-blue'
             }`}>
               {sessaoAberta ? 'Em andamento' : 'Agendada'}
             </span>
           </div>
-          <div className="flex items-center gap-4 mt-1 text-[12px] text-[#5c6282]">
+          <div className="flex items-center gap-4 mt-1 text-[12px] text-fg-3">
             <span className="font-mono">{sessaoMock.data}</span>
             <span>·</span>
             <span>{sessaoMock.horaInicio}</span>
@@ -143,13 +143,13 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
           {!sessaoAberta ? (
             <button
               onClick={() => setSessaoAberta(true)}
-              className="flex items-center gap-2 bg-[#1fa870] hover:bg-[#178a5c] text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors"
+              className="flex items-center gap-2 bg-brand-green hover:bg-brand-green text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors"
             >
               <Play size={13} />
               Abrir Sessão
             </button>
           ) : (
-            <button className="flex items-center gap-2 bg-[#d94040] hover:bg-[#b33030] text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors">
+            <button className="flex items-center gap-2 bg-brand-red hover:bg-brand-red text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors">
               <Square size={13} />
               Encerrar Sessão
             </button>
@@ -160,16 +160,16 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
       {/* KPIs da sessão */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'Itens na pauta', value: sessaoMock.pauta.length, icon: FileText, color: 'text-[#2d7dd2]', bg: 'bg-[#0d1e35]' },
-          { label: 'Vereadores', value: sessaoMock.vereadores.length, icon: Users, color: 'text-[#9198b0]', bg: 'bg-[#1c202e]' },
-          { label: 'Presentes', value: totalPresentes, icon: CheckCircle, color: quorumAtingido ? 'text-[#1fa870]' : 'text-[#e8a020]', bg: quorumAtingido ? 'bg-[#0a2318]' : 'bg-[#2e1f06]' },
-          { label: 'Quórum mínimo', value: sessaoMock.quorumMinimo, icon: AlertTriangle, color: 'text-[#9198b0]', bg: 'bg-[#1c202e]' },
+          { label: 'Itens na pauta', value: sessaoMock.pauta.length, icon: FileText, color: 'text-brand-blue', bg: 'bg-brand-blue-soft' },
+          { label: 'Vereadores', value: sessaoMock.vereadores.length, icon: Users, color: 'text-fg-2', bg: 'bg-surface-2' },
+          { label: 'Presentes', value: totalPresentes, icon: CheckCircle, color: quorumAtingido ? 'text-brand-green' : 'text-brand-amber', bg: quorumAtingido ? 'bg-brand-green-soft' : 'bg-brand-amber-soft' },
+          { label: 'Quórum mínimo', value: sessaoMock.quorumMinimo, icon: AlertTriangle, color: 'text-fg-2', bg: 'bg-surface-2' },
         ].map(kpi => (
-          <div key={kpi.label} className={`${kpi.bg} border border-[#1e2333] rounded-lg p-4 flex items-center gap-3`}>
+          <div key={kpi.label} className={`${kpi.bg} border border-line rounded-lg p-4 flex items-center gap-3`}>
             <kpi.icon size={20} className={kpi.color} />
             <div>
               <div className={`text-[22px] font-bold font-mono ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-[11px] text-[#5c6282]">{kpi.label}</div>
+              <div className="text-[11px] text-fg-3">{kpi.label}</div>
             </div>
           </div>
         ))}
@@ -177,16 +177,16 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
 
       {/* Aviso de quórum */}
       {sessaoAberta && !quorumAtingido && (
-        <div className="bg-[#2e1f06] border border-[#e8a020]/30 rounded-lg px-4 py-3 flex items-center gap-3">
-          <AlertTriangle size={15} className="text-[#e8a020] flex-shrink-0" />
-          <span className="text-[13px] text-[#e8a020]">
+        <div className="bg-brand-amber-soft border border-brand-amber/30 rounded-lg px-4 py-3 flex items-center gap-3">
+          <AlertTriangle size={15} className="text-brand-amber flex-shrink-0" />
+          <span className="text-[13px] text-brand-amber">
             Quórum insuficiente para votações. Presentes: {totalPresentes} / Mínimo: {sessaoMock.quorumMinimo}
           </span>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="border-b border-[#1e2333]">
+      <div className="border-b border-line">
         <div className="flex gap-0">
           {[
             { id: 'pauta', label: `Pauta (${sessaoMock.pauta.length})` },
@@ -199,8 +199,8 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
               onClick={() => setTab(t.id as typeof tab)}
               className={`px-5 py-3 text-[13px] font-medium border-b-2 transition-colors ${
                 tab === t.id
-                  ? 'border-[#2d7dd2] text-[#2d7dd2]'
-                  : 'border-transparent text-[#5c6282] hover:text-[#9198b0]'
+                  ? 'border-brand-blue text-brand-blue'
+                  : 'border-transparent text-fg-3 hover:text-fg-2'
               }`}
             >
               {t.label}
@@ -215,19 +215,19 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
           {sessaoMock.pauta.map((item) => {
             const sc = situacaoConfig[item.situacao] ?? situacaoConfig['PENDENTE']
             return (
-              <div key={item.id} className="bg-[#13161f] border border-[#1e2333] rounded-lg flex items-center gap-4 px-5 py-3.5">
-                <div className="w-8 h-8 rounded-full bg-[#0f1117] border border-[#1e2333] flex items-center justify-center text-[13px] font-bold font-mono text-[#5c6282]">
+              <div key={item.id} className="bg-surface-1 border border-line rounded-lg flex items-center gap-4 px-5 py-3.5">
+                <div className="w-8 h-8 rounded-full bg-surface-0 border border-line flex items-center justify-center text-[13px] font-bold font-mono text-fg-3">
                   {item.ordem}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-mono text-[12px] font-semibold text-[#2d7dd2]">{item.proposicao.numero}</span>
-                    <span className="text-[10px] bg-[#1c202e] text-[#9198b0] px-2 py-0.5 rounded-full">
+                    <span className="font-mono text-[12px] font-semibold text-brand-blue">{item.proposicao.numero}</span>
+                    <span className="text-[10px] bg-surface-2 text-fg-2 px-2 py-0.5 rounded-full">
                       {tipoPautaLabel[item.tipo]}
                     </span>
                   </div>
-                  <div className="text-[13px] text-[#9198b0] leading-snug truncate">{item.proposicao.ementa}</div>
-                  <div className="text-[11px] text-[#5c6282] mt-0.5">{item.proposicao.autor}</div>
+                  <div className="text-[13px] text-fg-2 leading-snug truncate">{item.proposicao.ementa}</div>
+                  <div className="text-[11px] text-fg-3 mt-0.5">{item.proposicao.autor}</div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="flex items-center gap-1.5">
@@ -237,7 +237,7 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
                   {sessaoAberta && item.tipo === 'VOTACAO' && (
                     <button
                       onClick={() => { setVotacaoAtiva(item.proposicao.id); setTab('votacao') }}
-                      className="text-[11px] bg-[#2d7dd2] hover:bg-[#1e6fbf] text-white px-3 py-1.5 rounded-md transition-colors ml-2"
+                      className="text-[11px] bg-brand-blue hover:bg-brand-blue-2 text-white px-3 py-1.5 rounded-md transition-colors ml-2"
                     >
                       Votar
                     </button>
@@ -253,19 +253,19 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
       {tab === 'presenca' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="text-[13px] text-[#9198b0]">
+            <div className="text-[13px] text-fg-2">
               Registre a presença dos vereadores antes de iniciar as votações.
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setPresencas(Object.fromEntries(sessaoMock.vereadores.map(v => [v.id, true])))}
-                className="text-[12px] text-[#1fa870] border border-[#1e2333] px-3 py-1.5 rounded-md hover:border-[#1fa870]/40 transition-colors"
+                className="text-[12px] text-brand-green border border-line px-3 py-1.5 rounded-md hover:border-brand-green/40 transition-colors"
               >
                 Marcar todos
               </button>
               <button
                 onClick={() => setPresencas({})}
-                className="text-[12px] text-[#5c6282] border border-[#1e2333] px-3 py-1.5 rounded-md hover:border-[#2a3048] transition-colors"
+                className="text-[12px] text-fg-3 border border-line px-3 py-1.5 rounded-md hover:border-line-2 transition-colors"
               >
                 Limpar
               </button>
@@ -278,24 +278,24 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
                 onClick={() => setPresencas(p => ({ ...p, [v.id]: !p[v.id] }))}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
                   presencas[v.id]
-                    ? 'border-[#1fa870] bg-[#0a2318]'
-                    : 'border-[#1e2333] bg-[#13161f] hover:bg-[#1c202e]'
+                    ? 'border-brand-green bg-brand-green-soft'
+                    : 'border-line bg-surface-1 hover:bg-surface-2'
                 }`}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${
-                  presencas[v.id] ? 'bg-[#1fa870] text-[#0f1117]' : 'bg-[#1c202e] text-[#5c6282]'
+                  presencas[v.id] ? 'bg-brand-green text-surface-0' : 'bg-surface-2 text-fg-3'
                 }`}>
                   {v.nome.split(' ').slice(-1)[0][0]}{v.nome.split(' ').slice(-2,-1)[0]?.[0] ?? ''}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className={`text-[13px] font-medium ${presencas[v.id] ? 'text-[#e8eaf0]' : 'text-[#9198b0]'}`}>
+                  <div className={`text-[13px] font-medium ${presencas[v.id] ? 'text-fg-1' : 'text-fg-2'}`}>
                     {v.nome}
                   </div>
-                  <div className="text-[10px] text-[#5c6282]">{v.partido}</div>
+                  <div className="text-[10px] text-fg-3">{v.partido}</div>
                 </div>
                 {presencas[v.id]
-                  ? <CheckCircle size={15} className="text-[#1fa870] flex-shrink-0" />
-                  : <XCircle size={15} className="text-[#2a3048] flex-shrink-0" />
+                  ? <CheckCircle size={15} className="text-brand-green flex-shrink-0" />
+                  : <XCircle size={15} className="text-line-2 flex-shrink-0" />
                 }
               </button>
             ))}
@@ -307,12 +307,12 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
       {tab === 'votacao' && (
         <div className="space-y-4">
           {/* Selecionar proposição para votar */}
-          <div className="bg-[#13161f] border border-[#1e2333] rounded-lg p-4">
-            <div className="text-[12px] text-[#5c6282] mb-2">Proposição em votação</div>
+          <div className="bg-surface-1 border border-line rounded-lg p-4">
+            <div className="text-[12px] text-fg-3 mb-2">Proposição em votação</div>
             <select
               value={votacaoAtiva ?? ''}
               onChange={e => setVotacaoAtiva(e.target.value || null)}
-              className="w-full bg-[#0f1117] border border-[#1e2333] rounded-md px-3 py-2 text-[13px] text-[#e8eaf0] focus:outline-none focus:border-[#2d7dd2] transition-colors"
+              className="w-full bg-surface-0 border border-line rounded-md px-3 py-2 text-[13px] text-fg-1 focus:outline-none focus:border-brand-blue transition-colors"
             >
               <option value="">Selecionar proposição...</option>
               {sessaoMock.pauta.filter(i => i.tipo === 'VOTACAO').map(item => (
@@ -327,14 +327,14 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
             <>
               {/* Painel de votos */}
               <div className="space-y-2">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-[#5c6282] mb-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-3 mb-3">
                   Registro de votos — {sessaoMock.pauta.find(i => i.proposicao.id === votacaoAtiva)?.proposicao.numero}
                 </div>
                 {sessaoMock.vereadores.map(v => {
                   const votoAtual = votos[v.id]
                   return (
-                    <div key={v.id} className="bg-[#13161f] border border-[#1e2333] rounded-lg flex items-center gap-4 px-4 py-3">
-                      <div className="flex-1 text-[13px] font-medium text-[#e8eaf0]">{v.nome}</div>
+                    <div key={v.id} className="bg-surface-1 border border-line rounded-lg flex items-center gap-4 px-4 py-3">
+                      <div className="flex-1 text-[13px] font-medium text-fg-1">{v.nome}</div>
                       <div className="flex gap-1.5">
                         {(['SIM', 'NAO', 'ABSTENCAO', 'AUSENTE'] as VotoTipo[]).map(opcao => (
                           <button
@@ -342,11 +342,11 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
                             onClick={() => registrarVoto(v.id, opcao)}
                             className={`text-[11px] font-semibold px-3 py-1.5 rounded-md border transition-all ${
                               votoAtual === opcao
-                                ? opcao === 'SIM' ? 'bg-[#0a2318] border-[#1fa870] text-[#1fa870]'
-                                  : opcao === 'NAO' ? 'bg-[#2e0e0e] border-[#d94040] text-[#d94040]'
-                                  : opcao === 'ABSTENCAO' ? 'bg-[#2e1f06] border-[#e8a020] text-[#e8a020]'
-                                  : 'bg-[#1c202e] border-[#5c6282] text-[#5c6282]'
-                                : 'bg-transparent border-[#1e2333] text-[#5c6282] hover:border-[#2a3048]'
+                                ? opcao === 'SIM' ? 'bg-brand-green-soft border-brand-green text-brand-green'
+                                  : opcao === 'NAO' ? 'bg-brand-red-soft border-brand-red text-brand-red'
+                                  : opcao === 'ABSTENCAO' ? 'bg-brand-amber-soft border-brand-amber text-brand-amber'
+                                  : 'bg-surface-2 border-fg-3 text-fg-3'
+                                : 'bg-transparent border-line text-fg-3 hover:border-line-2'
                             }`}
                           >
                             {opcao === 'ABSTENCAO' ? 'ABS' : opcao === 'AUSENTE' ? 'AUS' : opcao}
@@ -362,30 +362,30 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
               {Object.keys(votos).length > 0 && (() => {
                 const { sim, nao, abstencao, aprovado } = apurarVotacao()
                 return (
-                  <div className={`border rounded-lg p-5 ${aprovado ? 'bg-[#0a2318] border-[#1fa870]/30' : 'bg-[#2e0e0e] border-[#d94040]/30'}`}>
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-[#5c6282] mb-3">
+                  <div className={`border rounded-lg p-5 ${aprovado ? 'bg-brand-green-soft border-brand-green/30' : 'bg-brand-red-soft border-brand-red/30'}`}>
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-3 mb-3">
                       Apuração parcial
                     </div>
                     <div className="flex items-center gap-6">
                       <div className="text-center">
-                        <div className="text-[28px] font-bold font-mono text-[#1fa870]">{sim}</div>
-                        <div className="text-[11px] text-[#5c6282]">Sim</div>
+                        <div className="text-[28px] font-bold font-mono text-brand-green">{sim}</div>
+                        <div className="text-[11px] text-fg-3">Sim</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-[28px] font-bold font-mono text-[#d94040]">{nao}</div>
-                        <div className="text-[11px] text-[#5c6282]">Não</div>
+                        <div className="text-[28px] font-bold font-mono text-brand-red">{nao}</div>
+                        <div className="text-[11px] text-fg-3">Não</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-[28px] font-bold font-mono text-[#e8a020]">{abstencao}</div>
-                        <div className="text-[11px] text-[#5c6282]">Abstenção</div>
+                        <div className="text-[28px] font-bold font-mono text-brand-amber">{abstencao}</div>
+                        <div className="text-[11px] text-fg-3">Abstenção</div>
                       </div>
                       <div className="ml-auto">
-                        <div className={`text-[20px] font-bold ${aprovado ? 'text-[#1fa870]' : 'text-[#d94040]'}`}>
+                        <div className={`text-[20px] font-bold ${aprovado ? 'text-brand-green' : 'text-brand-red'}`}>
                           {aprovado ? '✓ APROVADO' : '✗ REJEITADO'}
                         </div>
                       </div>
                     </div>
-                    <button className="mt-4 w-full bg-[#2d7dd2] hover:bg-[#1e6fbf] text-white text-[13px] font-medium py-2.5 rounded-md transition-colors">
+                    <button className="mt-4 w-full bg-brand-blue hover:bg-brand-blue-2 text-white text-[13px] font-medium py-2.5 rounded-md transition-colors">
                       Confirmar e Registrar Votação
                     </button>
                   </div>
@@ -399,12 +399,12 @@ export default function SessaoDetailPage({ params }: { params: { id: string } })
       {/* Tab: Ata */}
       {tab === 'ata' && (
         <div className="space-y-4">
-          <div className="bg-[#13161f] border border-[#1e2333] rounded-lg p-5">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-[#5c6282] mb-3">Ata da Sessão</div>
+          <div className="bg-surface-1 border border-line rounded-lg p-5">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-3 mb-3">Ata da Sessão</div>
             <textarea
               placeholder="Redija a ata da sessão legislativa..."
               rows={16}
-              className="w-full bg-[#0f1117] border border-[#1e2333] rounded-md px-4 py-3 text-[13px] text-[#e8eaf0] font-mono resize-none focus:outline-none focus:border-[#2d7dd2] transition-colors placeholder:text-[#5c6282]"
+              className="w-full bg-surface-0 border border-line rounded-md px-4 py-3 text-[13px] text-fg-1 font-mono resize-none focus:outline-none focus:border-brand-blue transition-colors placeholder:text-fg-3"
               defaultValue={`ATA DA ${sessaoMock.tipo} SESSÃO ORDINÁRIA Nº ${sessaoMock.numero} DA CÂMARA MUNICIPAL
 
 Data: ${sessaoMock.data}
@@ -420,10 +420,10 @@ ${sessaoMock.pauta.map((i, idx) => `${idx + 1}. ${i.proposicao.numero} — ${i.p
             />
           </div>
           <div className="flex gap-3">
-            <button className="text-[13px] border border-[#1e2333] text-[#9198b0] hover:text-[#e8eaf0] px-4 py-2 rounded-md transition-colors">
+            <button className="text-[13px] border border-line text-fg-2 hover:text-fg-1 px-4 py-2 rounded-md transition-colors">
               Salvar Rascunho
             </button>
-            <button className="text-[13px] bg-[#1fa870] hover:bg-[#178a5c] text-white font-medium px-5 py-2 rounded-md transition-colors">
+            <button className="text-[13px] bg-brand-green hover:bg-brand-green text-white font-medium px-5 py-2 rounded-md transition-colors">
               Aprovar e Assinar Ata
             </button>
           </div>

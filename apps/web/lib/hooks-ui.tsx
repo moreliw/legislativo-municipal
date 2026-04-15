@@ -47,28 +47,28 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => responder(false)} />
 
-          <div className="relative bg-[#13161f] border border-[#2a3048] rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="relative bg-surface-1 border border-line-2 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <button
               onClick={() => responder(false)}
-              className="absolute top-4 right-4 text-[#5c6282] hover:text-[#9198b0] transition-colors"
+              className="absolute top-4 right-4 text-fg-3 hover:text-fg-3 transition-colors"
             >
               <X size={15} />
             </button>
 
             {/* Ícone de aviso para variante danger */}
             {estado.variante === 'danger' && (
-              <div className="w-10 h-10 rounded-full bg-[#2e0e0e] border border-[#d94040]/30 flex items-center justify-center mb-4">
-                <AlertTriangle size={18} className="text-[#d94040]" />
+              <div className="w-10 h-10 rounded-full bg-brand-red-soft border border-brand-red/30 flex items-center justify-center mb-4">
+                <AlertTriangle size={18} className="text-brand-red" />
               </div>
             )}
 
-            <h2 className="text-[15px] font-semibold text-[#e8eaf0] mb-2">{estado.titulo}</h2>
-            <p className="text-[13px] text-[#9198b0] leading-relaxed mb-6">{estado.descricao}</p>
+            <h2 className="text-[15px] font-semibold text-fg-1 mb-2">{estado.titulo}</h2>
+            <p className="text-[13px] text-fg-3 leading-relaxed mb-6">{estado.descricao}</p>
 
             <div className="flex gap-2">
               <button
                 onClick={() => responder(false)}
-                className="flex-1 text-[13px] border border-[#1e2333] text-[#9198b0] hover:text-[#e8eaf0] py-2.5 rounded-md transition-colors"
+                className="flex-1 text-[13px] border border-line text-fg-3 hover:text-fg-1 py-2.5 rounded-md transition-colors"
               >
                 {estado.cancelLabel ?? 'Cancelar'}
               </button>
@@ -76,8 +76,8 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 onClick={() => responder(true)}
                 className={`flex-1 text-[13px] font-medium py-2.5 rounded-md transition-colors ${
                   estado.variante === 'danger'
-                    ? 'bg-[#d94040] hover:bg-[#b33030] text-white'
-                    : 'bg-[#2d7dd2] hover:bg-[#1e6fbf] text-white'
+                    ? 'bg-brand-red hover:bg-brand-red text-white'
+                    : 'bg-brand-blue hover:bg-brand-blue-2 text-white'
                 }`}
               >
                 {estado.confirmLabel ?? 'Confirmar'}
@@ -129,10 +129,10 @@ export function useToastState() {
 // ── ToastContainer ─────────────────────────────────────────────────
 
 const toastConfig = {
-  success: { bg: 'bg-[#0a2318]', border: 'border-[#1fa870]/30', text: 'text-[#1fa870]', dot: 'bg-[#1fa870]' },
-  error:   { bg: 'bg-[#2e0e0e]', border: 'border-[#d94040]/30', text: 'text-[#e07070]', dot: 'bg-[#d94040]' },
-  info:    { bg: 'bg-[#0d1e35]', border: 'border-[#2d7dd2]/30', text: 'text-[#2d7dd2]', dot: 'bg-[#2d7dd2]' },
-  warning: { bg: 'bg-[#2e1f06]', border: 'border-[#e8a020]/30', text: 'text-[#e8a020]', dot: 'bg-[#e8a020]' },
+  success: { bg: 'bg-brand-green-soft', border: 'border-brand-green/30', text: 'text-brand-green', dot: 'bg-brand-green' },
+  error:   { bg: 'bg-brand-red-soft', border: 'border-brand-red/30', text: 'text-brand-red', dot: 'bg-brand-red' },
+  info:    { bg: 'bg-brand-blue-soft', border: 'border-brand-blue/30', text: 'text-brand-blue', dot: 'bg-brand-blue' },
+  warning: { bg: 'bg-brand-amber-soft', border: 'border-brand-amber/30', text: 'text-brand-amber', dot: 'bg-brand-amber' },
 }
 
 export function ToastContainer({
