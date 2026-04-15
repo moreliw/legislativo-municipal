@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import fp from 'fastify-plugin'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -32,7 +33,7 @@ declare module 'fastify' {
   }
 }
 
-export async function authPlugin(app: FastifyInstance) {
+async function authPlugin(app: FastifyInstance) {
   app.addHook('onRequest', async (req: FastifyRequest, reply: FastifyReply) => {
     const url = req.url.split('?')[0]
 
@@ -126,3 +127,6 @@ function checarPermissao(permissoes: string[], requerida: string): boolean {
     return (pm === '*' || pm === modulo) && (pa === '*' || pa === acao)
   })
 }
+
+export default fp(authPlugin, { name: 'auth' })
+export { authPlugin }

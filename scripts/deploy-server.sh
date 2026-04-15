@@ -339,6 +339,12 @@ NEXT_PUBLIC_API_URL="https://${DOMAIN}/api" \
   pnpm --filter @legislativo/web build 2>&1 | tail -8
 ok "Frontend compilado"
 
+info "Copiando arquivos estáticos para standalone..."
+STANDALONE_DIR="$APP_DIR/apps/web/.next/standalone/apps/web"
+cp -r "$APP_DIR/apps/web/.next/static" "$STANDALONE_DIR/.next/static"
+cp -r "$APP_DIR/apps/web/public" "$STANDALONE_DIR/public" 2>/dev/null || true
+ok "Estáticos copiados para standalone"
+
 # =============================================================================
 # ETAPA 7 — PM2
 # =============================================================================
@@ -365,9 +371,9 @@ module.exports = {
     },
     {
       name: 'leg-web',
-      script: 'node_modules/.bin/next',
-      args: 'start -p 3000 -H 0.0.0.0',
+      script: '.next/standalone/apps/web/server.js',
       cwd: '/opt/legislativo/apps/web',
+      interpreter: 'node',
       instances: 1,
       exec_mode: 'fork',
       env: {
@@ -645,8 +651,14 @@ pnpm --filter @legislativo/api build 2>&1 | tail -3
 info "Compilando Frontend..."
 pnpm --filter @legislativo/web build 2>&1 | tail -5
 
+info "Copiando arquivos estáticos para standalone..."
+STANDALONE="$APP_DIR/apps/web/.next/standalone/apps/web"
+cp -r "$APP_DIR/apps/web/.next/static" "$STANDALONE/.next/static"
+cp -r "$APP_DIR/apps/web/public" "$STANDALONE/public" 2>/dev/null || true
+
 info "Reiniciando serviços..."
-pm2 reload ecosystem.config.js --update-env 2>&1 | tail -3
+pm2 reload leg-api --update-env 2>&1 | tail -2
+pm2 restart leg-web 2>&1 | tail -2
 pm2 save --force 2>&1 | tail -1
 
 info "Recarregando Nginx..."
