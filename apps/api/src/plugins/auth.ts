@@ -1,118 +1,128 @@
-import fp from 'fastify-plugin'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+// Rotas públicas — sem autenticação
+const ROTAS_PUBLICAS = [
+  '/health',
+  '/docs',
+  '/docs/',
+  '/api/v1/auth/login',
+  '/api/v1/auth/refresh',
+  '/api/v1/auth/logout',
+  '/api/v1/auth/recuperar-senha',
+  '/api/v1/auth/redefinir-senha',
+  '/api/v1/publicacao/portal',
+  '/api/v1/publicacao/portal/',
+]
+
 declare module 'fastify' {
   interface FastifyRequest {
     user: {
-      id: string
-      casaId: string
-      nome: string
-      email: string
-      perfis: string[]
-      permissoes: string[]
-      orgaos: string[]
-    }
-    auditoria: {
-      registrar: (data: { entidade: string; entidadeId: string; acao: string; dadosAntes?: unknown; dadosDepois?: unknown }) => Promise<void>
+      id:            string
+      casaId:        string
+      nome:          string
+      email:         string
+      perfis:        string[]
+      permissoes:    string[]
+      orgaos:        string[]
+      precisaTrocar: boolean
     }
   }
 }
 
-export const authPlugin = fp(async (app: FastifyInstance) => {
-  if (!app.hasRequestDecorator('user')) {
-    app.decorateRequest('user', null)
-  }
-
+export async function authPlugin(app: FastifyInstance) {
   app.addHook('onRequest', async (req: FastifyRequest, reply: FastifyReply) => {
-    // Rotas públicas não precisam de auth
-    const publicPaths = ['/health', '/api/v1/publicacao/portal']
-    if (publicPaths.some(p => req.url.startsWith(p))) return
+    const url = req.url.split('?')[0]
 
-    // Verificar JWT
-    try {
-      await req.jwtVerify()
-    } catch {
-      return reply.status(401).send({ error: 'Unauthorized', message: 'Token inválido ou ausente' })
+    // Liberar rotas públicas
+    if (ROTAS_PUBLICAS.some(p => url === p || url.startsWith(p))) return
+
+    // Verificar Bearer token
+    const header = req.headers.authorization
+    if (!header?.startsWith('Bearer ')) {
+      return reply.status(401).send({ error: 'Unauthorized', message: 'Token não fornecido' })
     }
 
-    const jwtPayload = req.user as Record<string, unknown>
-    const keycloakId = jwtPayload.sub as string
+    // Verificar JWT
+    let payload: Record<string, unknown>
+    try {
+      payload = await req.jwtVerify() as Record<string, unknown>
+    } catch (err: any) {
+      const msg = err?.code === 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED'
+        ? 'Token expirado' : 'Token inválido'
+      return reply.status(401).send({ error: 'Unauthorized', message: msg })
+    }
+
+    const userId = payload.sub as string
 
     // Buscar usuário no banco
     const usuario = await prisma.usuario.findUnique({
-      where: { keycloakId },
+      where: { id: userId },
       include: {
-        perfis: { include: { perfil: true } },
+        perfis: { include: { perfil: { select: { nome: true, permissoes: true } } } },
         orgaos: { select: { orgaoId: true } },
+        credencial: { select: { precisaTrocar: true } },
       },
     })
 
     if (!usuario || !usuario.ativo) {
-      return reply.status(403).send({ error: 'Forbidden', message: 'Usuário inativo ou não encontrado' })
+      return reply.status(403).send({ error: 'Forbidden', message: 'Usuário inativo' })
     }
 
-    // Construir permissões acumuladas
     const permissoes = new Set<string>()
+    const perfisNomes: string[] = []
     for (const up of usuario.perfis) {
-      for (const perm of up.perfil.permissoes) {
-        permissoes.add(perm)
-      }
+      perfisNomes.push(up.perfil.nome)
+      for (const p of up.perfil.permissoes) permissoes.add(p)
     }
 
     req.user = {
-      id: usuario.id,
-      casaId: usuario.casaId,
-      nome: usuario.nome,
-      email: usuario.email,
-      perfis: usuario.perfis.map(up => up.perfil.nome),
-      permissoes: [...permissoes],
-      orgaos: usuario.orgaos.map(o => o.orgaoId),
+      id:            usuario.id,
+      casaId:        usuario.casaId,
+      nome:          usuario.nome,
+      email:         usuario.email,
+      perfis:        perfisNomes,
+      permissoes:    [...permissoes],
+      orgaos:        usuario.orgaos.map(o => o.orgaoId),
+      precisaTrocar: usuario.credencial?.precisaTrocar ?? false,
     }
   })
-})
+}
 
-/**
- * Middleware de verificação de permissão
- * Suporta wildcard: "proposicoes:*" ou "*:*"
- */
+
 export function requireAuth(req: FastifyRequest, reply: FastifyReply, done: () => void) {
-  if (!req.user) {
-    return reply.status(401).send({ error: 'Unauthorized' })
-  }
+  if (!req.user) return reply.status(401).send({ error: 'Unauthorized' })
   done()
 }
 
-export function requirePermission(...permissoesRequeridas: string[]) {
-  return function (req: FastifyRequest, reply: FastifyReply, done: () => void) {
-    if (!req.user) {
-      return reply.status(401).send({ error: 'Unauthorized' })
-    }
-
-    const temPermissao = permissoesRequeridas.every(permRequerida =>
-      checarPermissao(req.user.permissoes, permRequerida),
-    )
-
-    if (!temPermissao) {
-      return reply.status(403).send({
-        error: 'Forbidden',
-        message: `Permissão insuficiente. Requerido: ${permissoesRequeridas.join(', ')}`,
-      })
-    }
-
+export function requirePermission(...requeridas: string[]) {
+  return (req: FastifyRequest, reply: FastifyReply, done: () => void) => {
+    if (!req.user) return reply.status(401).send({ error: 'Unauthorized' })
+    const tem = requeridas.every(r => checarPermissao(req.user.permissoes, r))
+    if (!tem) return reply.status(403).send({
+      error: 'Forbidden',
+      message: `Permissão insuficiente: ${requeridas.join(', ')}`,
+    })
     done()
   }
 }
 
+export function requireAdmin(req: FastifyRequest, reply: FastifyReply, done: () => void) {
+  if (!req.user) return reply.status(401).send({ error: 'Unauthorized' })
+  if (!req.user.perfis.includes('ADMINISTRADOR') &&
+      !checarPermissao(req.user.permissoes, '*:*')) {
+    return reply.status(403).send({ error: 'Forbidden', message: 'Apenas administradores' })
+  }
+  done()
+}
+
 function checarPermissao(permissoes: string[], requerida: string): boolean {
   if (permissoes.includes('*:*')) return true
-
   const [modulo, acao] = requerida.split(':')
-
   return permissoes.some(p => {
-    const [pMod, pAcao] = p.split(':')
-    return (pMod === '*' || pMod === modulo) && (pAcao === '*' || pAcao === acao)
+    const [pm, pa] = p.split(':')
+    return (pm === '*' || pm === modulo) && (pa === '*' || pa === acao)
   })
 }

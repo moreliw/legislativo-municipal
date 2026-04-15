@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { TopBar } from '@/components/layout/TopBar'
+import AuthGuard from '@/components/auth/AuthGuard'
 import { Providers } from './providers'
 import { ThemeProvider } from '@/components/layout/ThemeProvider'
 
@@ -16,18 +15,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </head>
-      <body className="antialiased" style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }}>
+      <body className="antialiased">
         <ThemeProvider>
           <Providers>
-            <div className="flex h-screen overflow-hidden bg-surface-0">
-              <Sidebar />
-              <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-                <TopBar />
-                <main className="flex-1 overflow-y-auto bg-surface-0">
-                  {children}
-                </main>
-              </div>
-            </div>
+            <AuthGuard>
+              {children}
+            </AuthGuard>
           </Providers>
         </ThemeProvider>
       </body>
