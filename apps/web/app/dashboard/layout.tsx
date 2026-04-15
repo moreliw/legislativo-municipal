@@ -3,6 +3,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { getToken, getUsuario, logout, apiFetch } from '@/lib/auth'
+import { Moon, Sun } from 'lucide-react'
+import { useTheme } from '@/components/layout/ThemeProvider'
 
 // Ícones SVG inline
 const ICONS: Record<string, string> = {
@@ -57,6 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [menuOpen, setMenuOpen] = useState(false)
   const [loading, setLoading]   = useState(true)
   const usuario = getUsuario()
+  const { theme, toggle } = useTheme()
 
   useEffect(() => {
     const token = getToken()
@@ -253,8 +256,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div style={{ fontSize: 12, color: 'var(--text-4)' }}>
             {menuData?.isSuperAdmin ? 'Administração Geral do Sistema' : (usuario?.casaNome || 'Câmara Municipal')}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'var(--font-mono)' }}>
-            {new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' })}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              onClick={toggle}
+              aria-label="Alternar tema"
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+                background: 'var(--bg-raised)',
+                color: 'var(--text-2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
+            </button>
+            <div style={{ fontSize: 12, color: 'var(--text-4)', fontFamily: 'var(--font-mono)' }}>
+              {new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' })}
+            </div>
           </div>
         </header>
         <main style={{ flex: 1, overflow: 'auto' }}>

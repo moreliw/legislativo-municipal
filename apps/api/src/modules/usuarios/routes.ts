@@ -1,8 +1,18 @@
 import { FastifyInstance, FastifyRequest } from 'fastify'
 import { PrismaClient } from '@prisma/client'
 import { requireAuth, requirePermission } from '../../plugins/auth'
+import { z } from 'zod'
 
 const prisma = new PrismaClient()
+
+const atualizarPerfilSchema = z.object({
+  cargo: z.string().min(2).max(120).optional(),
+  avatar: z.string().url().optional().nullable(),
+})
+
+const preferenciasSchema = z.object({
+  tema: z.enum(['light', 'dark']).optional(),
+})
 
 export async function usuariosRoutes(app: FastifyInstance) {
 
@@ -17,7 +27,50 @@ export async function usuariosRoutes(app: FastifyInstance) {
         },
       })
       if (!usuario) return reply.status(404).send({ error: 'Usuário não encontrado' })
-      return usuario
+      return {
+        ...usuario,
+        preferencias: (usuario.preferencias as Record<string, unknown> | null) ?? {},
+      }
+    },
+  )
+
+  // ── PREFERÊNCIAS DO USUÁRIO (tema, etc.) ───────────────────────────
+  app.get('/me/preferencias', { preHandler: [requireAuth] },
+    async (req: FastifyRequest) => {
+      const usuario = await prisma.usuario.findUnique({
+        where: { id: req.user.id },
+        select: { preferencias: true },
+      })
+      return {
+        preferencias: (usuario?.preferencias as Record<string, unknown> | null) ?? {},
+      }
+    },
+  )
+
+  app.patch('/me/preferencias', { preHandler: [requireAuth] },
+    async (req: FastifyRequest, reply) => {
+      const body = preferenciasSchema.parse(req.body)
+      const atual = await prisma.usuario.findUnique({
+        where: { id: req.user.id },
+        select: { preferencias: true },
+      })
+
+      const preferenciasAtuais = (atual?.preferencias as Record<string, unknown> | null) ?? {}
+      const proximasPreferencias = {
+        ...preferenciasAtuais,
+        ...(body.tema ? { tema: body.tema } : {}),
+      }
+
+      const usuario = await prisma.usuario.update({
+        where: { id: req.user.id },
+        data: { preferencias: proximasPreferencias as object },
+        select: { id: true, preferencias: true },
+      })
+
+      return reply.status(200).send({
+        id: usuario.id,
+        preferencias: (usuario.preferencias as Record<string, unknown> | null) ?? {},
+      })
     },
   )
 
@@ -49,10 +102,13 @@ export async function usuariosRoutes(app: FastifyInstance) {
   // ── ATUALIZAR PERFIL ─────────────────────────────────────────────
   app.patch('/me', { preHandler: [requireAuth] },
     async (req: FastifyRequest, reply) => {
-      const { cargo } = req.body as { cargo?: string }
+      const body = atualizarPerfilSchema.parse(req.body)
       const usuario = await prisma.usuario.update({
         where: { id: req.user.id },
-        data: { ...(cargo ? { cargo } : {}) },
+        data: {
+          ...(body.cargo ? { cargo: body.cargo } : {}),
+          ...(body.avatar !== undefined ? { avatar: body.avatar } : {}),
+        },
       })
       return usuario
     },

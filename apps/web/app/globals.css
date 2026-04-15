@@ -140,8 +140,8 @@ html {
   background-color: var(--surface-0);
   color: var(--text-1);
   font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -195,7 +195,7 @@ code, pre { font-family: var(--font-mono); }
   gap: 8px;
   padding: 9px 16px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   font-family: var(--font-sans);
   cursor: pointer;
@@ -247,7 +247,7 @@ code, pre { font-family: var(--font-mono); }
 
 .label {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-3);
   text-transform: uppercase;
@@ -278,7 +278,7 @@ code, pre { font-family: var(--font-mono); }
 .table th {
   text-align: left;
   padding: 10px 16px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-3);
   text-transform: uppercase;
@@ -288,7 +288,7 @@ code, pre { font-family: var(--font-mono); }
 }
 .table td {
   padding: 12px 16px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-2);
   border-bottom: 1px solid var(--border);
 }
@@ -311,4 +311,8 @@ code, pre { font-family: var(--font-mono); }
 .page { padding: 28px 32px; max-width: 1400px; }
 .page-header { margin-bottom: 24px; }
 .page-title { font-size: 20px; font-weight: 700; color: var(--text-1); }
-.page-subtitle { font-size: 13px; color: var(--text-3); margin-top: 4px; }
+.page-subtitle { font-size: 14px; color: var(--text-3); margin-top: 4px; }
+
+@media (max-width: 1024px) {
+  html { font-size: 14px; }
+}

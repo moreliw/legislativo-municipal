@@ -1,12 +1,34 @@
 import { FastifyInstance, FastifyRequest } from 'fastify'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
-import { requireAuth, requirePermission } from '../../plugins/auth'
+import { requireAuth, requirePermission, requireAdmin } from '../../plugins/auth'
 import { camundaService } from '../processos/camunda.service'
 import { readFileSync } from 'fs'
 import path from 'path'
+import { hashSenha, validarForcaSenha } from '../auth/auth.service'
 
 const prisma = new PrismaClient()
+
+const criarUsuarioSchema = z.object({
+  nome: z.string().min(3).max(140),
+  email: z.string().email(),
+  cargo: z.string().min(2).max(120).optional(),
+  senha: z.string().min(8),
+  perfilIds: z.array(z.string().cuid()).min(1),
+  orgaoIds: z.array(z.string().cuid()).optional().default([]),
+  ativo: z.boolean().optional().default(true),
+})
+
+const atualizarUsuarioSchema = z.object({
+  nome: z.string().min(3).max(140).optional(),
+  cargo: z.string().min(2).max(120).nullable().optional(),
+  ativo: z.boolean().optional(),
+  orgaoIds: z.array(z.string().cuid()).optional(),
+})
+
+const atualizarPerfisSchema = z.object({
+  perfilIds: z.array(z.string().cuid()).min(1),
+})
 
 export async function adminRoutes(app: FastifyInstance) {
 
@@ -143,30 +165,207 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ── USUÁRIOS ──────────────────────────────────────────────────────
   app.get('/usuarios', {
-    preHandler: [requireAuth, requirePermission('admin:usuarios')],
+    preHandler: [requireAuth, requirePermission('usuarios:ler')],
   }, async (req: FastifyRequest, reply) => {
     return prisma.usuario.findMany({
       where: { casaId: req.user.casaId },
       include: {
-        orgaos: { include: { orgao: { select: { nome: true, sigla: true } } } },
-        perfis: { include: { perfil: { select: { nome: true } } } },
+        orgaos: { include: { orgao: { select: { id: true, nome: true, sigla: true } } } },
+        perfis: { include: { perfil: { select: { id: true, nome: true, descricao: true, permissoes: true } } } },
+        credencial: { select: { ultimoLoginEm: true, ultimoLoginIp: true, precisaTrocar: true } },
       },
       orderBy: { nome: 'asc' },
     })
   })
 
+  app.get('/perfis', {
+    preHandler: [requireAuth, requirePermission('usuarios:ler')],
+  }, async (req: FastifyRequest) => {
+    return prisma.perfil.findMany({
+      where: { casaId: req.user.casaId },
+      orderBy: { nome: 'asc' },
+      select: {
+        id: true,
+        nome: true,
+        descricao: true,
+        permissoes: true,
+      },
+    })
+  })
+
+  app.post('/usuarios', {
+    preHandler: [requireAuth, requireAdmin],
+  }, async (req: FastifyRequest, reply) => {
+    const body = criarUsuarioSchema.parse(req.body)
+
+    const { valida, erros } = validarForcaSenha(body.senha)
+    if (!valida) {
+      return reply.status(400).send({ error: 'SenhaFraca', erros })
+    }
+
+    const emailNormalizado = body.email.trim().toLowerCase()
+    const existente = await prisma.usuario.findFirst({
+      where: {
+        casaId: req.user.casaId,
+        email: { equals: emailNormalizado, mode: 'insensitive' },
+      },
+      select: { id: true },
+    })
+    if (existente) {
+      return reply.status(409).send({ error: 'Conflict', message: 'Já existe usuário com este e-mail nesta câmara' })
+    }
+
+    const [perfis, orgaos] = await Promise.all([
+      prisma.perfil.findMany({
+        where: { id: { in: body.perfilIds }, casaId: req.user.casaId },
+        select: { id: true },
+      }),
+      body.orgaoIds.length > 0
+        ? prisma.orgao.findMany({
+          where: { id: { in: body.orgaoIds }, casaId: req.user.casaId, ativo: true },
+          select: { id: true },
+        })
+        : Promise.resolve([]),
+    ])
+
+    if (perfis.length !== body.perfilIds.length) {
+      return reply.status(400).send({ error: 'ValidationError', message: 'Perfil inválido para esta câmara' })
+    }
+    if (orgaos.length !== body.orgaoIds.length) {
+      return reply.status(400).send({ error: 'ValidationError', message: 'Órgão inválido para esta câmara' })
+    }
+
+    const senhaHash = await hashSenha(body.senha)
+    const usuario = await prisma.$transaction(async (tx) => {
+      const novo = await tx.usuario.create({
+        data: {
+          casaId: req.user.casaId,
+          nome: body.nome,
+          email: emailNormalizado,
+          cargo: body.cargo ?? null,
+          ativo: body.ativo,
+        },
+      })
+      await tx.credencialUsuario.create({
+        data: {
+          usuarioId: novo.id,
+          senhaHash,
+          precisaTrocar: true,
+        },
+      })
+      await tx.usuarioPerfil.createMany({
+        data: perfis.map((p) => ({ usuarioId: novo.id, perfilId: p.id })),
+      })
+      if (orgaos.length > 0) {
+        await tx.usuarioOrgao.createMany({
+          data: orgaos.map((o, idx) => ({
+            usuarioId: novo.id,
+            orgaoId: o.id,
+            principal: idx === 0,
+          })),
+        })
+      }
+      return novo
+    })
+
+    return reply.status(201).send({
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      ativo: usuario.ativo,
+      message: 'Usuário criado com sucesso',
+    })
+  })
+
+  app.patch('/usuarios/:id', {
+    preHandler: [requireAuth, requireAdmin],
+  }, async (req: FastifyRequest<{ Params: { id: string } }>, reply) => {
+    const body = atualizarUsuarioSchema.parse(req.body)
+    const usuarioId = req.params.id
+
+    const alvo = await prisma.usuario.findFirst({
+      where: { id: usuarioId, casaId: req.user.casaId },
+      select: { id: true, ativo: true },
+    })
+    if (!alvo) return reply.status(404).send({ error: 'NotFound', message: 'Usuário não encontrado' })
+
+    if (usuarioId === req.user.id && body.ativo === false) {
+      return reply.status(400).send({ error: 'ValidationError', message: 'Não é permitido desativar o próprio usuário' })
+    }
+
+    if (body.orgaoIds) {
+      const orgaos = await prisma.orgao.findMany({
+        where: { id: { in: body.orgaoIds }, casaId: req.user.casaId, ativo: true },
+        select: { id: true },
+      })
+      if (orgaos.length !== body.orgaoIds.length) {
+        return reply.status(400).send({ error: 'ValidationError', message: 'Órgão inválido para esta câmara' })
+      }
+    }
+
+    const atualizado = await prisma.$transaction(async (tx) => {
+      const usuario = await tx.usuario.update({
+        where: { id: usuarioId },
+        data: {
+          ...(body.nome ? { nome: body.nome } : {}),
+          ...(body.cargo !== undefined ? { cargo: body.cargo } : {}),
+          ...(body.ativo !== undefined ? { ativo: body.ativo } : {}),
+        },
+      })
+
+      if (body.orgaoIds) {
+        await tx.usuarioOrgao.deleteMany({ where: { usuarioId } })
+        if (body.orgaoIds.length > 0) {
+          await tx.usuarioOrgao.createMany({
+            data: body.orgaoIds.map((orgaoId, idx) => ({
+              usuarioId,
+              orgaoId,
+              principal: idx === 0,
+            })),
+          })
+        }
+      }
+      return usuario
+    })
+
+    return reply.status(200).send({ id: atualizado.id, ativo: atualizado.ativo, nome: atualizado.nome })
+  })
+
   app.patch('/usuarios/:id/perfis', {
-    preHandler: [requireAuth, requirePermission('admin:usuarios')],
-  }, async (req: FastifyRequest<{ Params: { id: string }; Body: { perfis: string[] } }>, reply) => {
-    const { perfis } = req.body as { perfis: string[] }
+    preHandler: [requireAuth, requireAdmin],
+  }, async (req: FastifyRequest<{ Params: { id: string } }>, reply) => {
+    const { perfilIds } = atualizarPerfisSchema.parse(req.body)
+    const usuarioId = req.params.id
 
-    // Remover perfis atuais e adicionar novos
-    await prisma.usuarioPerfil.deleteMany({ where: { usuarioId: req.params.id } })
+    const alvo = await prisma.usuario.findFirst({
+      where: { id: usuarioId, casaId: req.user.casaId },
+      select: { id: true },
+    })
+    if (!alvo) return reply.status(404).send({ error: 'NotFound', message: 'Usuário não encontrado' })
 
-    const perfisEncontrados = await prisma.perfil.findMany({ where: { nome: { in: perfis } } })
+    const perfisEncontrados = await prisma.perfil.findMany({
+      where: { id: { in: perfilIds }, casaId: req.user.casaId },
+      select: { id: true, nome: true },
+    })
+    if (perfisEncontrados.length !== perfilIds.length) {
+      return reply.status(400).send({ error: 'ValidationError', message: 'Perfil inválido para esta câmara' })
+    }
 
-    await prisma.usuarioPerfil.createMany({
-      data: perfisEncontrados.map(p => ({ usuarioId: req.params.id, perfilId: p.id })),
+    if (usuarioId === req.user.id) {
+      const manterAdmin = perfisEncontrados.some((p) => p.nome === 'ADMINISTRADOR')
+      if (!manterAdmin) {
+        return reply.status(400).send({
+          error: 'ValidationError',
+          message: 'Não é permitido remover o próprio perfil de administrador',
+        })
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.usuarioPerfil.deleteMany({ where: { usuarioId } })
+      await tx.usuarioPerfil.createMany({
+        data: perfisEncontrados.map((p) => ({ usuarioId, perfilId: p.id })),
+      })
     })
 
     return { ok: true, perfis: perfisEncontrados.map(p => p.nome) }

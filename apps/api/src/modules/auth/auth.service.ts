@@ -38,6 +38,7 @@ export interface TokenPair {
     permissoes: string[]
     precisaTrocar: boolean
     avatar: string | null
+    preferencias: Record<string, unknown> | null
   }
 }
 
@@ -209,6 +210,7 @@ export async function realizarLogin(input: LoginInput, assinarJwt: (payload: obj
       permissoes:    [...permissoes],
       precisaTrocar: usuario.credencial.precisaTrocar,
       avatar:        usuario.avatar,
+      preferencias:  (usuario.preferencias as Record<string, unknown> | null) ?? {},
     },
   }
 }

@@ -13,6 +13,10 @@ export interface Usuario {
   permissoes: string[]
   precisaTrocar: boolean
   avatar: string | null
+  preferencias?: {
+    tema?: 'light' | 'dark'
+    [key: string]: unknown
+  } | null
 }
 
 const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '')
@@ -32,6 +36,13 @@ export function getUsuario(): Usuario | null {
   const raw = localStorage.getItem(USUARIO_KEY)
   if (!raw) return null
   try { return JSON.parse(raw) } catch { return null }
+}
+
+export function setUsuarioParcial(partial: Partial<Usuario>) {
+  if (typeof window === 'undefined') return
+  const atual = getUsuario()
+  if (!atual) return
+  localStorage.setItem(USUARIO_KEY, JSON.stringify({ ...atual, ...partial }))
 }
 
 export function isLoggedIn(): boolean {

@@ -88,6 +88,7 @@ model Usuario {
   matricula    String?
   cargo        String?
   avatar       String?
+  preferencias Json     @default("{}")
   ativo        Boolean  @default(true)
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
