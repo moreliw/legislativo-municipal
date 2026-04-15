@@ -66,12 +66,9 @@ export async function build() {
 
   await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } })
 
-  // ── Declarar decorators UMA VEZ no escopo raiz ───────────────────
-  // DEVE ser feito ANTES de registrar qualquer plugin que use req.user
-  app.decorateRequest('user', null)
-  app.decorateRequest('auditoria', null)
-
   // ── Plugins de negócio ───────────────────────────────────────────
+  // Nota: @fastify/jwt já registra req.user automaticamente
+  // auditoria é registrado aqui antes dos outros plugins
   await app.register(swaggerPlugin)
   await app.register(authPlugin)
   await app.register(auditoriaPlugin)

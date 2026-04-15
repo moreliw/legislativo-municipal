@@ -18,6 +18,10 @@ declare module 'fastify' {
 }
 
 export async function auditoriaPlugin(app: FastifyInstance) {
+  // Registrar decorator de auditoria apenas se não existir
+  if (!app.hasDecorator('auditoria')) {
+    app.decorateRequest('auditoria', null)
+  }
   app.addHook('onRequest', async (req: FastifyRequest) => {
     req.auditoria = {
       registrar: async ({ entidade, entidadeId, acao, dadosAntes, dadosDepois }) => {

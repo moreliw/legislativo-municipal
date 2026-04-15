@@ -1592,6 +1592,9 @@ var NotificacaoService = class {
 var import_client8 = require("@prisma/client");
 var prisma8 = new import_client8.PrismaClient();
 async function auditoriaPlugin(app) {
+  if (!app.hasDecorator("auditoria")) {
+    app.decorateRequest("auditoria", null);
+  }
   app.addHook("onRequest", async (req) => {
     req.auditoria = {
       registrar: async ({ entidade, entidadeId, acao, dadosAntes, dadosDepois }) => {
@@ -3765,8 +3768,6 @@ async function build() {
     verify: { algorithms: ["HS256"] }
   });
   await app.register(import_multipart.default, { limits: { fileSize: 50 * 1024 * 1024 } });
-  app.decorateRequest("user", null);
-  app.decorateRequest("auditoria", null);
   await app.register(swaggerPlugin);
   await app.register(authPlugin);
   await app.register(auditoriaPlugin);
