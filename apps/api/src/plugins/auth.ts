@@ -43,7 +43,7 @@ declare module 'fastify' {
 }
 
 export const authPlugin = fp(async (app: FastifyInstance) => {
-  app.decorateRequest('user', null)
+  if (!app.hasDecorator('user')) app.decorateRequest('user', null)
 
   app.addHook('onRequest', async (req: FastifyRequest, reply: FastifyReply) => {
     const url = req.url.split('?')[0]

@@ -5,7 +5,7 @@ import { PrismaClient, AcaoAuditoria } from '@prisma/client'
 const prisma = new PrismaClient()
 
 export const auditoriaPlugin = fp(async (app: FastifyInstance) => {
-  app.decorateRequest('auditoria', null)
+  if (!app.hasDecorator('auditoria')) app.decorateRequest('auditoria', null)
 
   app.addHook('onRequest', async (req: FastifyRequest) => {
     req.auditoria = {
