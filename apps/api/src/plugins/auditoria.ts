@@ -1,59 +1,70 @@
-import fp from 'fastify-plugin'
 import { FastifyInstance, FastifyRequest } from 'fastify'
-import { PrismaClient, AcaoAuditoria } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-export const auditoriaPlugin = fp(async (app: FastifyInstance) => {
+declare module 'fastify' {
+  interface FastifyRequest {
+    auditoria: {
+      registrar: (data: {
+        entidade: string
+        entidadeId: string
+        acao: string
+        dadosAntes?: unknown
+        dadosDepois?: unknown
+      }) => Promise<void>
+    }
+  }
+}
 
+export async function auditoriaPlugin(app: FastifyInstance) {
   app.addHook('onRequest', async (req: FastifyRequest) => {
     req.auditoria = {
       registrar: async ({ entidade, entidadeId, acao, dadosAntes, dadosDepois }) => {
         try {
           await prisma.auditoriaLog.create({
             data: {
-              usuarioId: req.user?.id ?? null,
               entidade,
               entidadeId,
-              acao: acao as AcaoAuditoria,
-              dadosAntes: dadosAntes ? JSON.parse(JSON.stringify(dadosAntes)) : undefined,
-              dadosDepois: dadosDepois ? JSON.parse(JSON.stringify(dadosDepois)) : undefined,
-              ip: req.ip,
-              userAgent: req.headers['user-agent'],
-              endpoint: `${req.method} ${req.url}`,
+              acao,
+              usuarioId: req.user?.id ?? null,
+              ip:        req.ip,
+              endpoint:  `${req.method} ${req.url}`,
+              dadosAntes:   dadosAntes  ? (dadosAntes  as any) : undefined,
+              dadosDepois:  dadosDepois ? (dadosDepois as any) : undefined,
             },
           })
-        } catch (err) {
-          req.log.error({ err }, 'Falha ao registrar auditoria')
+        } catch {
+          // Falha de auditoria nunca deve quebrar o fluxo principal
         }
       },
     }
   })
-})
+}
 
+// Serviço de auditoria para uso direto nos módulos
 export class AuditoriaService {
+  private prisma: PrismaClient
+
+  constructor() {
+    this.prisma = new PrismaClient()
+  }
+
   async registrar(data: {
-    usuarioId?: string
     entidade: string
     entidadeId: string
     acao: string
-    dadosAntes?: unknown
-    dadosDepois?: unknown
+    usuarioId?: string
     ip?: string
     endpoint?: string
+    dadosAntes?: unknown
+    dadosDepois?: unknown
   }) {
-    return prisma.auditoriaLog.create({
-      data: {
-        usuarioId: data.usuarioId ?? null,
-        entidade: data.entidade,
-        entidadeId: data.entidadeId,
-        acao: data.acao as AcaoAuditoria,
-        dadosAntes: data.dadosAntes ? JSON.parse(JSON.stringify(data.dadosAntes)) : undefined,
-        dadosDepois: data.dadosDepois ? JSON.parse(JSON.stringify(data.dadosDepois)) : undefined,
-        ip: data.ip,
-        endpoint: data.endpoint,
-      },
-    })
+    try {
+      await this.prisma.auditoriaLog.create({ data: data as any })
+    } catch {
+      // Falha silenciosa — auditoria nunca quebra o fluxo
+    }
   }
 
   async listar(filtros: {
@@ -65,65 +76,24 @@ export class AuditoriaService {
     page?: number
     pageSize?: number
   }) {
-    const where = {
-      ...(filtros.entidade ? { entidade: filtros.entidade } : {}),
-      ...(filtros.entidadeId ? { entidadeId: filtros.entidadeId } : {}),
-      ...(filtros.usuarioId ? { usuarioId: filtros.usuarioId } : {}),
-      ...(filtros.de || filtros.ate
-        ? { criadoEm: { gte: filtros.de, lte: filtros.ate } }
-        : {}),
-    }
+    const { entidade, entidadeId, usuarioId, de, ate, page = 1, pageSize = 50 } = filtros
+    const where: any = {}
+    if (entidade)   where.entidade   = entidade
+    if (entidadeId) where.entidadeId = entidadeId
+    if (usuarioId)  where.usuarioId  = usuarioId
+    if (de || ate)  where.criadoEm   = { ...(de ? { gte: de } : {}), ...(ate ? { lte: ate } : {}) }
 
-    const page = filtros.page ?? 1
-    const pageSize = filtros.pageSize ?? 50
-
-    const [total, logs] = await Promise.all([
-      prisma.auditoriaLog.count({ where }),
-      prisma.auditoriaLog.findMany({
+    const [total, data] = await Promise.all([
+      this.prisma.auditoriaLog.count({ where }),
+      this.prisma.auditoriaLog.findMany({
         where,
-        orderBy: { criadoEm: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: {
-          usuario: { select: { nome: true, email: true } },
-        },
+        orderBy: { criadoEm: 'desc' },
+        include: { usuario: { select: { nome: true, email: true } } },
       }),
     ])
-
-    return { data: logs, meta: { total, page, pageSize } }
-  }
-
-  async exportar(filtros: { entidade?: string; de?: Date; ate?: Date }) {
-    const logs = await prisma.auditoriaLog.findMany({
-      where: {
-        ...(filtros.entidade ? { entidade: filtros.entidade } : {}),
-        ...(filtros.de || filtros.ate
-          ? { criadoEm: { gte: filtros.de, lte: filtros.ate } }
-          : {}),
-      },
-      orderBy: { criadoEm: 'asc' },
-      include: { usuario: { select: { nome: true, email: true, cpf: true } } },
-    })
-
-    // Gera CSV
-    const header = 'id,data,entidade,entidadeId,acao,usuario,email,ip,endpoint'
-    const rows = logs.map(l =>
-      [
-        l.id,
-        l.criadoEm.toISOString(),
-        l.entidade,
-        l.entidadeId,
-        l.acao,
-        l.usuario?.nome ?? '',
-        l.usuario?.email ?? '',
-        l.ip ?? '',
-        l.endpoint ?? '',
-      ]
-        .map(v => `"${String(v).replace(/"/g, '""')}"`)
-        .join(','),
-    )
-
-    return [header, ...rows].join('\n')
+    return { data, meta: { total, page, pageSize, totalPages: Math.ceil(total / pageSize) } }
   }
 }
 

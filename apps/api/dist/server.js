@@ -902,7 +902,6 @@ var TramitacaoService = class {
 };
 
 // src/plugins/auth.ts
-var import_fastify_plugin = __toESM(require("fastify-plugin"));
 var import_client4 = require("@prisma/client");
 var prisma4 = new import_client4.PrismaClient();
 var ROTAS_PUBLICAS = [
@@ -915,34 +914,22 @@ var ROTAS_PUBLICAS = [
   "/api/v1/auth/recuperar-senha",
   "/api/v1/auth/redefinir-senha",
   "/api/v1/publicacao/portal",
-  // Portal de transparência
   "/api/v1/publicacao/portal/"
 ];
-var authPlugin = (0, import_fastify_plugin.default)(async (app) => {
+async function authPlugin(app) {
   app.addHook("onRequest", async (req, reply) => {
     const url = req.url.split("?")[0];
     if (ROTAS_PUBLICAS.some((p) => url === p || url.startsWith(p))) return;
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      return reply.status(401).send({
-        error: "Unauthorized",
-        message: "Token de acesso n\xE3o fornecido"
-      });
+    const header = req.headers.authorization;
+    if (!header?.startsWith("Bearer ")) {
+      return reply.status(401).send({ error: "Unauthorized", message: "Token n\xE3o fornecido" });
     }
     let payload;
     try {
       payload = await req.jwtVerify();
     } catch (err) {
-      if (err?.code === "FST_JWT_AUTHORIZATION_TOKEN_EXPIRED") {
-        return reply.status(401).send({
-          error: "TokenExpired",
-          message: "Token expirado. Renove sua sess\xE3o."
-        });
-      }
-      return reply.status(401).send({
-        error: "Unauthorized",
-        message: "Token inv\xE1lido"
-      });
+      const msg = err?.code === "FST_JWT_AUTHORIZATION_TOKEN_EXPIRED" ? "Token expirado" : "Token inv\xE1lido";
+      return reply.status(401).send({ error: "Unauthorized", message: msg });
     }
     const userId = payload.sub;
     const usuario = await prisma4.usuario.findUnique({
@@ -954,16 +941,13 @@ var authPlugin = (0, import_fastify_plugin.default)(async (app) => {
       }
     });
     if (!usuario || !usuario.ativo) {
-      return reply.status(403).send({
-        error: "Forbidden",
-        message: "Usu\xE1rio inativo ou sem acesso"
-      });
+      return reply.status(403).send({ error: "Forbidden", message: "Usu\xE1rio inativo" });
     }
     const permissoes = /* @__PURE__ */ new Set();
     const perfisNomes = [];
     for (const up of usuario.perfis) {
       perfisNomes.push(up.perfil.nome);
-      for (const perm of up.perfil.permissoes) permissoes.add(perm);
+      for (const p of up.perfil.permissoes) permissoes.add(p);
     }
     req.user = {
       id: usuario.id,
@@ -976,7 +960,7 @@ var authPlugin = (0, import_fastify_plugin.default)(async (app) => {
       precisaTrocar: usuario.credencial?.precisaTrocar ?? false
     };
   });
-});
+}
 function requireAuth(req, reply, done) {
   if (!req.user) return reply.status(401).send({ error: "Unauthorized" });
   done();
@@ -985,12 +969,10 @@ function requirePermission(...requeridas) {
   return (req, reply, done) => {
     if (!req.user) return reply.status(401).send({ error: "Unauthorized" });
     const tem = requeridas.every((r) => checarPermissao(req.user.permissoes, r));
-    if (!tem) {
-      return reply.status(403).send({
-        error: "Forbidden",
-        message: `Permiss\xE3o insuficiente. Requerido: ${requeridas.join(", ")}`
-      });
-    }
+    if (!tem) return reply.status(403).send({
+      error: "Forbidden",
+      message: `Permiss\xE3o insuficiente: ${requeridas.join(", ")}`
+    });
     done();
   };
 }
@@ -1607,96 +1589,60 @@ var NotificacaoService = class {
 };
 
 // src/plugins/auditoria.ts
-var import_fastify_plugin2 = __toESM(require("fastify-plugin"));
 var import_client8 = require("@prisma/client");
 var prisma8 = new import_client8.PrismaClient();
-var auditoriaPlugin = (0, import_fastify_plugin2.default)(async (app) => {
+async function auditoriaPlugin(app) {
   app.addHook("onRequest", async (req) => {
     req.auditoria = {
       registrar: async ({ entidade, entidadeId, acao, dadosAntes, dadosDepois }) => {
         try {
           await prisma8.auditoriaLog.create({
             data: {
-              usuarioId: req.user?.id ?? null,
               entidade,
               entidadeId,
               acao,
-              dadosAntes: dadosAntes ? JSON.parse(JSON.stringify(dadosAntes)) : void 0,
-              dadosDepois: dadosDepois ? JSON.parse(JSON.stringify(dadosDepois)) : void 0,
+              usuarioId: req.user?.id ?? null,
               ip: req.ip,
-              userAgent: req.headers["user-agent"],
-              endpoint: `${req.method} ${req.url}`
+              endpoint: `${req.method} ${req.url}`,
+              dadosAntes: dadosAntes ? dadosAntes : void 0,
+              dadosDepois: dadosDepois ? dadosDepois : void 0
             }
           });
-        } catch (err) {
-          req.log.error({ err }, "Falha ao registrar auditoria");
+        } catch {
         }
       }
     };
   });
-});
+}
 var AuditoriaService = class {
+  prisma;
+  constructor() {
+    this.prisma = new import_client8.PrismaClient();
+  }
   async registrar(data) {
-    return prisma8.auditoriaLog.create({
-      data: {
-        usuarioId: data.usuarioId ?? null,
-        entidade: data.entidade,
-        entidadeId: data.entidadeId,
-        acao: data.acao,
-        dadosAntes: data.dadosAntes ? JSON.parse(JSON.stringify(data.dadosAntes)) : void 0,
-        dadosDepois: data.dadosDepois ? JSON.parse(JSON.stringify(data.dadosDepois)) : void 0,
-        ip: data.ip,
-        endpoint: data.endpoint
-      }
-    });
+    try {
+      await this.prisma.auditoriaLog.create({ data });
+    } catch {
+    }
   }
   async listar(filtros) {
-    const where = {
-      ...filtros.entidade ? { entidade: filtros.entidade } : {},
-      ...filtros.entidadeId ? { entidadeId: filtros.entidadeId } : {},
-      ...filtros.usuarioId ? { usuarioId: filtros.usuarioId } : {},
-      ...filtros.de || filtros.ate ? { criadoEm: { gte: filtros.de, lte: filtros.ate } } : {}
-    };
-    const page = filtros.page ?? 1;
-    const pageSize = filtros.pageSize ?? 50;
-    const [total, logs] = await Promise.all([
-      prisma8.auditoriaLog.count({ where }),
-      prisma8.auditoriaLog.findMany({
+    const { entidade, entidadeId, usuarioId, de, ate, page = 1, pageSize = 50 } = filtros;
+    const where = {};
+    if (entidade) where.entidade = entidade;
+    if (entidadeId) where.entidadeId = entidadeId;
+    if (usuarioId) where.usuarioId = usuarioId;
+    if (de || ate) where.criadoEm = { ...de ? { gte: de } : {}, ...ate ? { lte: ate } : {} };
+    const [total, data] = await Promise.all([
+      this.prisma.auditoriaLog.count({ where }),
+      this.prisma.auditoriaLog.findMany({
         where,
-        orderBy: { criadoEm: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: {
-          usuario: { select: { nome: true, email: true } }
-        }
+        orderBy: { criadoEm: "desc" },
+        include: { usuario: { select: { nome: true, email: true } } }
       })
     ]);
-    return { data: logs, meta: { total, page, pageSize } };
-  }
-  async exportar(filtros) {
-    const logs = await prisma8.auditoriaLog.findMany({
-      where: {
-        ...filtros.entidade ? { entidade: filtros.entidade } : {},
-        ...filtros.de || filtros.ate ? { criadoEm: { gte: filtros.de, lte: filtros.ate } } : {}
-      },
-      orderBy: { criadoEm: "asc" },
-      include: { usuario: { select: { nome: true, email: true, cpf: true } } }
-    });
-    const header = "id,data,entidade,entidadeId,acao,usuario,email,ip,endpoint";
-    const rows = logs.map(
-      (l) => [
-        l.id,
-        l.criadoEm.toISOString(),
-        l.entidade,
-        l.entidadeId,
-        l.acao,
-        l.usuario?.nome ?? "",
-        l.usuario?.email ?? "",
-        l.ip ?? "",
-        l.endpoint ?? ""
-      ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
-    );
-    return [header, ...rows].join("\n");
+    return { data, meta: { total, page, pageSize, totalPages: Math.ceil(total / pageSize) } };
   }
 };
 var auditoriaService = new AuditoriaService();
@@ -3558,240 +3504,44 @@ async function exportacaoRoutes(app) {
   });
 }
 
-// src/plugins/lgpd.ts
-var import_fastify_plugin3 = __toESM(require("fastify-plugin"));
-var CAMPOS_SENSIVEIS = ["cpf", "telefone", "dataNascimento", "enderecoResidencial"];
-var lgpdPlugin = (0, import_fastify_plugin3.default)(async (app) => {
-  app.addHook("onSend", async (req, reply, payload) => {
-    reply.header("X-Privacy-Policy", "https://seudominio.gov.br/privacidade");
-    reply.header("X-Data-Retention", "5-years");
-    reply.header("X-LGPD-Compliant", "1");
-    return payload;
-  });
-  app.addHook("preSerialization", async (req, reply, payload) => {
-    if (!req.user || req.user.permissoes.includes("*:*")) return payload;
-    const temPermissaoDadosSensiveis = req.user.permissoes.some(
-      (p) => p.includes("dados_sensiveis") || p.includes("admin:")
-    );
-    if (temPermissaoDadosSensiveis) return payload;
-    return mascararDados(payload);
-  });
-});
-function mascararDados(obj) {
-  if (!obj || typeof obj !== "object") return obj;
-  if (Array.isArray(obj)) return obj.map(mascararDados);
-  const result = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (CAMPOS_SENSIVEIS.includes(key) && typeof value === "string") {
-      result[key] = mascarar(value);
-    } else if (typeof value === "object") {
-      result[key] = mascararDados(value);
-    } else {
-      result[key] = value;
-    }
-  }
-  return result;
-}
-function mascarar(valor) {
-  if (valor.length <= 4) return "***";
-  if (/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(valor)) {
-    return valor.replace(/(\d{3})\.\d{3}\.\d{3}(-\d{2})/, "$1.***.***$2");
-  }
-  if (valor.includes("@")) {
-    const [local, domain] = valor.split("@");
-    return `${local[0]}***@${domain}`;
-  }
-  if (/^\(\d{2}\)/.test(valor)) {
-    return valor.replace(/\d{4,5}(-\d{4})/, "*****$1");
-  }
-  return "*".repeat(valor.length - 4) + valor.slice(-4);
-}
-
 // src/plugins/swagger.ts
-var import_fastify_plugin4 = __toESM(require("fastify-plugin"));
 var import_swagger = __toESM(require("@fastify/swagger"));
 var import_swagger_ui = __toESM(require("@fastify/swagger-ui"));
-var swaggerPlugin = (0, import_fastify_plugin4.default)(async (app) => {
-  if (process.env.NODE_ENV === "production" && !process.env.ENABLE_SWAGGER) {
-    return;
-  }
+async function swaggerPlugin(app) {
   await app.register(import_swagger.default, {
     openapi: {
       info: {
         title: "Sistema Legislativo Municipal \u2014 API",
-        description: `
-## API REST do Sistema Legislativo Municipal
-
-Plataforma de gest\xE3o legislativa e documental para c\xE2maras municipais.
-Cobre o ciclo completo de proposi\xE7\xF5es: protocolo, tramita\xE7\xE3o, sess\xF5es, vota\xE7\xE3o, publica\xE7\xE3o.
-
-### Autentica\xE7\xE3o
-Todas as rotas (exceto \`/health\` e \`/api/v1/publicacao/portal\`) requerem JWT Bearer token.
-O token \xE9 obtido pelo fluxo OIDC do Keycloak.
-
-### Permiss\xF5es
-Cada endpoint requer uma permiss\xE3o espec\xEDfica no formato \`modulo:acao\`.
-Exemplo: \`proposicoes:criar\`, \`tramitacao:encaminhar\`, \`sessoes:votar\`.
-
-### Codes de status
-- \`200\` \u2014 OK
-- \`201\` \u2014 Criado
-- \`400\` \u2014 Valida\xE7\xE3o inv\xE1lida
-- \`401\` \u2014 N\xE3o autenticado
-- \`403\` \u2014 Sem permiss\xE3o
-- \`404\` \u2014 N\xE3o encontrado
-- \`422\` \u2014 L\xF3gica de neg\xF3cio violada (ex: transi\xE7\xE3o de estado inv\xE1lida)
-- \`500\` \u2014 Erro interno
-        `,
-        version: "1.0.0",
-        contact: {
-          name: "Suporte T\xE9cnico",
-          email: "suporte@camaramunicipal.gov.br"
-        },
-        license: {
-          name: "MIT"
-        }
+        description: "API REST para gest\xE3o legislativa municipal.",
+        version: "1.0.0"
       },
-      externalDocs: {
-        description: "Documenta\xE7\xE3o completa",
-        url: "https://github.com/sua-org/legislativo-municipal"
-      },
-      servers: [
-        { url: "http://localhost:3001", description: "Desenvolvimento" },
-        { url: "https://api.seudominio.gov.br", description: "Produ\xE7\xE3o" }
-      ],
       components: {
         securitySchemes: {
           bearerAuth: {
             type: "http",
             scheme: "bearer",
-            bearerFormat: "JWT",
-            description: "Token JWT obtido via Keycloak OIDC"
-          }
-        },
-        schemas: {
-          Proposicao: {
-            type: "object",
-            properties: {
-              id: { type: "string", format: "cuid", example: "clxxxxxxxx" },
-              numero: { type: "string", example: "PL-024/2024" },
-              ano: { type: "integer", example: 2024 },
-              ementa: { type: "string", example: "Disp\xF5e sobre o programa de energia solar..." },
-              status: {
-                type: "string",
-                enum: [
-                  "RASCUNHO",
-                  "EM_ELABORACAO",
-                  "PROTOCOLADO",
-                  "EM_ANALISE",
-                  "EM_COMISSAO",
-                  "AGUARDANDO_PARECER_JURIDICO",
-                  "EM_PAUTA",
-                  "EM_VOTACAO",
-                  "APROVADO",
-                  "REJEITADO",
-                  "DEVOLVIDO",
-                  "PUBLICADO",
-                  "ARQUIVADO",
-                  "SUSPENSO",
-                  "RETIRADO"
-                ]
-              },
-              origem: { type: "string", enum: ["VEREADOR", "MESA_DIRETORA", "COMISSAO", "PREFEITURA", "POPULAR", "EXTERNA"] },
-              regime: { type: "string", enum: ["ORDINARIO", "URGENTE", "URGENCIA_ESPECIAL", "SUMARIO"] },
-              criadoEm: { type: "string", format: "date-time" },
-              atualizadoEm: { type: "string", format: "date-time" }
-            },
-            required: ["id", "numero", "ementa", "status"]
-          },
-          TramitacaoEvento: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              sequencia: { type: "integer", example: 1 },
-              tipo: {
-                type: "string",
-                enum: [
-                  "PROTOCOLO",
-                  "DISTRIBUICAO",
-                  "ENCAMINHAMENTO",
-                  "DESPACHO",
-                  "PARECER_JURIDICO",
-                  "PARECER_COMISSAO",
-                  "INCLUSAO_PAUTA",
-                  "VOTACAO",
-                  "APROVACAO",
-                  "REJEICAO",
-                  "DEVOLUCAO",
-                  "SUSPENSAO",
-                  "REATIVACAO",
-                  "REDACAO_FINAL",
-                  "ASSINATURA",
-                  "PUBLICACAO",
-                  "ARQUIVAMENTO"
-                ]
-              },
-              descricao: { type: "string" },
-              statusAntes: { type: "string" },
-              statusDepois: { type: "string" },
-              criadoEm: { type: "string", format: "date-time" }
-            }
-          },
-          Error: {
-            type: "object",
-            properties: {
-              error: { type: "string", example: "ValidationError" },
-              message: { type: "string", example: "Dados inv\xE1lidos" },
-              statusCode: { type: "integer", example: 400 }
-            }
-          },
-          PaginatedResponse: {
-            type: "object",
-            properties: {
-              data: { type: "array", items: {} },
-              meta: {
-                type: "object",
-                properties: {
-                  total: { type: "integer" },
-                  page: { type: "integer" },
-                  pageSize: { type: "integer" },
-                  totalPages: { type: "integer" }
-                }
-              }
-            }
+            bearerFormat: "JWT"
           }
         }
       },
-      security: [{ bearerAuth: [] }],
-      tags: [
-        { name: "Proposi\xE7\xF5es", description: "Gest\xE3o de proposi\xE7\xF5es e tramita\xE7\xE3o" },
-        { name: "Tramita\xE7\xE3o", description: "Eventos e hist\xF3rico de tramita\xE7\xE3o" },
-        { name: "Sess\xF5es", description: "Sess\xF5es legislativas, pauta e vota\xE7\xF5es" },
-        { name: "Documentos", description: "Gest\xE3o de documentos e arquivos" },
-        { name: "PDF", description: "Gera\xE7\xE3o de documentos PDF" },
-        { name: "Processos", description: "Motor de processos Camunda" },
-        { name: "Publica\xE7\xE3o", description: "Portal de transpar\xEAncia" },
-        { name: "Notifica\xE7\xF5es", description: "Central de notifica\xE7\xF5es" },
-        { name: "Auditoria", description: "Logs e trilhas de auditoria" },
-        { name: "Busca", description: "Busca global" },
-        { name: "Admin", description: "Configura\xE7\xF5es e administra\xE7\xE3o" },
-        { name: "Usu\xE1rios", description: "Perfil e tarefas do usu\xE1rio" }
-      ]
+      security: [{ bearerAuth: [] }]
     }
   });
   await app.register(import_swagger_ui.default, {
     routePrefix: "/docs",
-    uiConfig: {
-      docExpansion: "list",
-      deepLinking: true,
-      tryItOutEnabled: true,
-      filter: true
-    },
-    staticCSP: true,
-    transformSpecificationClone: true
+    uiConfig: { docExpansion: "list", deepLinking: true }
   });
   app.log.info("Swagger UI dispon\xEDvel em /docs");
-});
+}
+
+// src/plugins/lgpd.ts
+async function lgpdPlugin(app) {
+  app.addHook("onSend", async (req, reply, payload) => {
+    reply.header("X-Content-Type-Options", "nosniff");
+    reply.header("X-Privacy-Policy", "https://legislativo.gov.br/privacidade");
+    return payload;
+  });
+}
 
 // src/server.ts
 var JWT_SECRET = process.env.JWT_SECRET;
@@ -3802,7 +3552,6 @@ async function build() {
   const app = (0, import_fastify.default)({
     logger: { level: process.env.LOG_LEVEL || "info" },
     trustProxy: true
-    // necessário para req.ip correto atrás de Nginx
   });
   await app.register(import_cors.default, {
     origin: [
@@ -3813,12 +3562,7 @@ async function build() {
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Authorization", "Content-Type", "Accept"]
   });
-  await app.register(import_cookie.default, {
-    secret: JWT_SECRET,
-    // cookie signing
-    hook: "onRequest",
-    parseOptions: {}
-  });
+  await app.register(import_cookie.default, { secret: JWT_SECRET });
   await app.register(import_rate_limit.default, {
     global: true,
     max: 300,
@@ -3827,18 +3571,13 @@ async function build() {
   });
   await app.register(import_jwt.default, {
     secret: JWT_SECRET,
-    sign: {
-      algorithm: "HS256",
-      expiresIn: "15m"
-    },
-    verify: {
-      algorithms: ["HS256"]
-    }
+    sign: { algorithm: "HS256", expiresIn: "15m" },
+    verify: { algorithms: ["HS256"] }
   });
   await app.register(import_multipart.default, { limits: { fileSize: 50 * 1024 * 1024 } });
+  app.decorateRequest("user", null);
+  app.decorateRequest("auditoria", null);
   await app.register(swaggerPlugin);
-  if (!app.hasDecorator("user")) app.decorateRequest("user", null);
-  if (!app.hasDecorator("auditoria")) app.decorateRequest("auditoria", null);
   await app.register(authPlugin);
   await app.register(auditoriaPlugin);
   await app.register(lgpdPlugin);
@@ -3866,9 +3605,7 @@ async function build() {
   await app.register(publicacaoRoutes, { prefix: `${v1}/publicacao` });
   app.setErrorHandler((error, req, reply) => {
     const status = error.statusCode ?? 500;
-    if (status >= 500) {
-      app.log.error({ error: error.message, url: req.url, method: req.method });
-    }
+    if (status >= 500) app.log.error({ err: error.message, url: req.url });
     reply.status(status).send({
       error: error.name || "InternalServerError",
       message: status === 500 ? "Erro interno do servidor" : error.message,
@@ -3876,7 +3613,7 @@ async function build() {
     });
   });
   app.setNotFoundHandler((req, reply) => {
-    reply.status(404).send({ error: "NotFound", message: `Rota ${req.method} ${req.url} n\xE3o encontrada` });
+    reply.status(404).send({ error: "NotFound", message: `${req.method} ${req.url} n\xE3o existe` });
   });
   return app;
 }
@@ -3884,14 +3621,13 @@ async function start() {
   const server = await build();
   try {
     await prisma.$connect();
-    logger.info("Banco de dados conectado");
+    logger.info("Banco conectado");
   } catch (err) {
-    logger.warn({ err }, "Banco n\xE3o conectou na inicializa\xE7\xE3o (tentar\xE1 reconectar)");
+    logger.warn({ err }, "Banco n\xE3o conectou \u2014 tentar\xE1 reconectar");
   }
   const port = parseInt(process.env.PORT || "3001");
-  const host = process.env.HOST || "0.0.0.0";
-  await server.listen({ host, port });
-  logger.info(`\u{1F3DB}\uFE0F  API Legislativo rodando em http://${host}:${port}`);
+  await server.listen({ host: "0.0.0.0", port });
+  logger.info(`API rodando em http://0.0.0.0:${port}`);
 }
 process.on("SIGTERM", async () => {
   await prisma.$disconnect();
@@ -3902,7 +3638,7 @@ process.on("SIGINT", async () => {
   process.exit(0);
 });
 start().catch((err) => {
-  console.error("Falha fatal ao iniciar servidor:", err);
+  console.error("Falha fatal:", err);
   process.exit(1);
 });
 // Annotate the CommonJS export names for ESM import in node:
