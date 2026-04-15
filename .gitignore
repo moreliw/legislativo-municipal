@@ -3,7 +3,9 @@ node_modules/
 .pnpm-store/
 
 # Build outputs
+# dist/ — exceto o bundle da API em produção
 dist/
+!apps/api/dist/server.js
 .next/
 out/
 
