@@ -20,27 +20,27 @@ function ModalAcao({
 }) {
   const [texto, setTexto] = useState('')
   const cores = {
-    danger: { btn: 'bg-[#d94040] hover:bg-[#b83333]', border: 'border-[#d94040]/30', bg: 'bg-[#2e0e0e]' },
-    warning: { btn: 'bg-[#e8a020] hover:bg-[#c88a18]', border: 'border-[#e8a020]/30', bg: 'bg-[#2e1f06]' },
-    info: { btn: 'bg-[#2d7dd2] hover:bg-[#1e6fbf]', border: 'border-[#2d7dd2]/30', bg: 'bg-[#0d1e35]' },
+    danger: { btn: 'bg-brand-red hover:bg-brand-red', border: 'border-brand-red/30', bg: 'bg-brand-red-soft' },
+    warning: { btn: 'bg-brand-amber hover:bg-brand-amber', border: 'border-brand-amber/30', bg: 'bg-brand-amber-soft' },
+    info: { btn: 'bg-brand-blue hover:bg-brand-blue-2', border: 'border-brand-blue/30', bg: 'bg-brand-blue-soft' },
   }
   const c = cores[tipo]
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className={`w-full max-w-md rounded-xl border ${c.border} ${c.bg} p-6 shadow-2xl`}>
-        <h3 className="text-[15px] font-semibold text-[#e8eaf0] mb-4">{titulo}</h3>
+        <h3 className="text-[15px] font-semibold text-fg-1 mb-4">{titulo}</h3>
         <textarea
           value={texto}
           onChange={e => setTexto(e.target.value)}
           placeholder={placeholder}
           rows={4}
-          className="w-full bg-[#0f1117] border border-[#1e2333] rounded-md px-3 py-2 text-[13px] text-[#e8eaf0] placeholder:text-[#5c6282] focus:outline-none focus:border-[#2d7dd2] resize-none"
+          className="w-full bg-surface-0 border border-line rounded-md px-3 py-2 text-[13px] text-fg-1 placeholder:text-fg-3 focus:outline-none focus:border-brand-blue resize-none"
         />
         <div className="flex gap-2 mt-4 justify-end">
           <button
             onClick={onCancelar}
-            className="text-[13px] border border-[#1e2333] text-[#9198b0] hover:text-[#e8eaf0] px-4 py-2 rounded-md transition-colors"
+            className="text-[13px] border border-line text-fg-2 hover:text-fg-1 px-4 py-2 rounded-md transition-colors"
           >
             Cancelar
           </button>
@@ -79,14 +79,14 @@ function SeletorOrgao({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="w-full max-w-md rounded-xl border border-[#2d7dd2]/30 bg-[#0d1e35] p-6 shadow-2xl">
-        <h3 className="text-[15px] font-semibold text-[#e8eaf0] mb-4">Encaminhar Proposição</h3>
+      <div className="w-full max-w-md rounded-xl border border-brand-blue/30 bg-brand-blue-soft p-6 shadow-2xl">
+        <h3 className="text-[15px] font-semibold text-fg-1 mb-4">Encaminhar Proposição</h3>
 
-        <label className="text-[11px] text-[#5c6282] mb-1.5 block">Órgão de destino</label>
+        <label className="text-[11px] text-fg-3 mb-1.5 block">Órgão de destino</label>
         <select
           value={orgaoId}
           onChange={e => setOrgaoId(e.target.value)}
-          className="w-full bg-[#0f1117] border border-[#1e2333] rounded-md px-3 py-2 text-[13px] text-[#e8eaf0] focus:outline-none focus:border-[#2d7dd2] mb-4"
+          className="w-full bg-surface-0 border border-line rounded-md px-3 py-2 text-[13px] text-fg-1 focus:outline-none focus:border-brand-blue mb-4"
         >
           <option value="">Selecione o órgão...</option>
           {orgaos.map(o => (
@@ -94,17 +94,17 @@ function SeletorOrgao({
           ))}
         </select>
 
-        <label className="text-[11px] text-[#5c6282] mb-1.5 block">Observação</label>
+        <label className="text-[11px] text-fg-3 mb-1.5 block">Observação</label>
         <textarea
           value={obs}
           onChange={e => setObs(e.target.value)}
           placeholder="Informe o motivo ou instrução para o encaminhamento..."
           rows={3}
-          className="w-full bg-[#0f1117] border border-[#1e2333] rounded-md px-3 py-2 text-[13px] text-[#e8eaf0] placeholder:text-[#5c6282] focus:outline-none focus:border-[#2d7dd2] resize-none"
+          className="w-full bg-surface-0 border border-line rounded-md px-3 py-2 text-[13px] text-fg-1 placeholder:text-fg-3 focus:outline-none focus:border-brand-blue resize-none"
         />
 
         <div className="flex gap-2 mt-4 justify-end">
-          <button onClick={onCancelar} className="text-[13px] border border-[#1e2333] text-[#9198b0] hover:text-[#e8eaf0] px-4 py-2 rounded-md transition-colors">
+          <button onClick={onCancelar} className="text-[13px] border border-line text-fg-2 hover:text-fg-1 px-4 py-2 rounded-md transition-colors">
             Cancelar
           </button>
           <button
@@ -113,7 +113,7 @@ function SeletorOrgao({
               if (orgao) onSelecionar(orgaoId, orgao.nome, obs)
             }}
             disabled={!orgaoId}
-            className="text-[13px] font-medium bg-[#2d7dd2] hover:bg-[#1e6fbf] text-white px-5 py-2 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="text-[13px] font-medium bg-brand-blue hover:bg-brand-blue-2 text-white px-5 py-2 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Encaminhar
           </button>
@@ -127,7 +127,7 @@ function SeletorOrgao({
 function Toast({ mensagem, tipo }: { mensagem: string; tipo: 'success' | 'error' }) {
   return (
     <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-lg text-[13px] font-medium shadow-xl ${
-      tipo === 'success' ? 'bg-[#1fa870] text-white' : 'bg-[#d94040] text-white'
+      tipo === 'success' ? 'bg-brand-green text-white' : 'bg-brand-red text-white'
     }`}>
       {tipo === 'success' ? <CheckCircle size={15} /> : <AlertTriangle size={15} />}
       {mensagem}
@@ -169,14 +169,14 @@ export default function AcoesProposicao({ proposicaoId, status }: { proposicaoId
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setModal('encaminhar')}
-          className="flex items-center gap-1.5 bg-[#2d7dd2] hover:bg-[#1e6fbf] text-white text-[12px] font-medium px-3 py-1.5 rounded-md transition-colors"
+          className="flex items-center gap-1.5 bg-brand-blue hover:bg-brand-blue-2 text-white text-[12px] font-medium px-3 py-1.5 rounded-md transition-colors"
         >
           <Send size={12} /> Encaminhar
         </button>
 
         <button
           onClick={() => setModal('devolver')}
-          className="flex items-center gap-1.5 border border-[#1e2333] text-[#e8a020] hover:bg-[#2e1f06] text-[12px] px-3 py-1.5 rounded-md transition-colors"
+          className="flex items-center gap-1.5 border border-line text-brand-amber hover:bg-brand-amber-soft text-[12px] px-3 py-1.5 rounded-md transition-colors"
         >
           <RotateCcw size={12} /> Devolver
         </button>
@@ -184,14 +184,14 @@ export default function AcoesProposicao({ proposicaoId, status }: { proposicaoId
         {status === 'SUSPENSO' ? (
           <button
             onClick={() => executarAcao('reativar', { motivo: 'Reativado manualmente' })}
-            className="flex items-center gap-1.5 border border-[#1e2333] text-[#1fa870] hover:bg-[#0a2318] text-[12px] px-3 py-1.5 rounded-md transition-colors"
+            className="flex items-center gap-1.5 border border-line text-brand-green hover:bg-brand-green-soft text-[12px] px-3 py-1.5 rounded-md transition-colors"
           >
             <CheckCircle size={12} /> Reativar
           </button>
         ) : (
           <button
             onClick={() => setModal('suspender')}
-            className="flex items-center gap-1.5 border border-[#1e2333] text-[#9198b0] hover:text-[#e8eaf0] text-[12px] px-3 py-1.5 rounded-md transition-colors"
+            className="flex items-center gap-1.5 border border-line text-fg-2 hover:text-fg-1 text-[12px] px-3 py-1.5 rounded-md transition-colors"
           >
             <AlertTriangle size={12} /> Suspender
           </button>
@@ -199,7 +199,7 @@ export default function AcoesProposicao({ proposicaoId, status }: { proposicaoId
 
         <button
           onClick={() => setModal('arquivar')}
-          className="flex items-center gap-1.5 border border-[#1e2333] text-[#d94040] hover:bg-[#2e0e0e] text-[12px] px-3 py-1.5 rounded-md transition-colors"
+          className="flex items-center gap-1.5 border border-line text-brand-red hover:bg-brand-red-soft text-[12px] px-3 py-1.5 rounded-md transition-colors"
         >
           <Archive size={12} /> Arquivar
         </button>

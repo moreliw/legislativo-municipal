@@ -13,13 +13,13 @@ const usuariosMock = [
 ]
 
 const perfisConfig: Record<string, string> = {
-  ADMINISTRADOR: 'bg-[#2e0e0e] text-[#d94040]',
-  GESTOR_LEGISLATIVO: 'bg-[#0d1e35] text-[#2d7dd2]',
-  PROTOCOLO: 'bg-[#1c202e] text-[#9198b0]',
-  VEREADOR: 'bg-[#1a1030] text-[#b09de0]',
-  PROCURADORIA: 'bg-[#2e1f06] text-[#e8a020]',
-  COMISSAO: 'bg-[#0a2318] text-[#1fa870]',
-  CONSULTA_PUBLICA: 'bg-[#1c202e] text-[#5c6282]',
+  ADMINISTRADOR: 'bg-brand-red-soft text-brand-red',
+  GESTOR_LEGISLATIVO: 'bg-brand-blue-soft text-brand-blue',
+  PROTOCOLO: 'bg-surface-2 text-fg-2',
+  VEREADOR: 'bg-brand-purple-soft text-brand-purple',
+  PROCURADORIA: 'bg-brand-amber-soft text-brand-amber',
+  COMISSAO: 'bg-brand-green-soft text-brand-green',
+  CONSULTA_PUBLICA: 'bg-surface-2 text-fg-3',
 }
 
 function initials(n: string) {
@@ -41,10 +41,10 @@ export default function UsuariosAdminPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[#e8eaf0]">Usuários</h1>
-          <p className="text-[13px] text-[#5c6282] mt-0.5">{filtrados.length} usuário{filtrados.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-xl font-semibold text-fg-1">Usuários</h1>
+          <p className="text-[13px] text-fg-3 mt-0.5">{filtrados.length} usuário{filtrados.length !== 1 ? 's' : ''}</p>
         </div>
-        <button className="flex items-center gap-2 bg-[#2d7dd2] hover:bg-[#1e6fbf] text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors">
+        <button className="flex items-center gap-2 bg-brand-blue hover:bg-brand-blue-2 text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors">
           <Plus size={14} />
           Novo Usuário
         </button>
@@ -53,13 +53,13 @@ export default function UsuariosAdminPage() {
       {/* Filtros */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5c6282]" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-3" />
           <input
             type="text"
             placeholder="Buscar por nome ou e-mail..."
             value={busca}
             onChange={e => setBusca(e.target.value)}
-            className="w-full bg-[#13161f] border border-[#1e2333] rounded-md pl-9 pr-4 py-2 text-[13px] text-[#e8eaf0] placeholder:text-[#5c6282] focus:outline-none focus:border-[#2d7dd2] transition-colors"
+            className="w-full bg-surface-1 border border-line rounded-md pl-9 pr-4 py-2 text-[13px] text-fg-1 placeholder:text-fg-3 focus:outline-none focus:border-brand-blue transition-colors"
           />
         </div>
         <div className="flex gap-1.5">
@@ -68,7 +68,7 @@ export default function UsuariosAdminPage() {
               key={String(f.value)}
               onClick={() => setFiltroAtivo(f.value)}
               className={`text-[12px] px-3 py-1.5 rounded-md border transition-colors ${
-                filtroAtivo === f.value ? 'border-[#2d7dd2] bg-[#162d4a] text-[#2d7dd2]' : 'border-[#1e2333] text-[#9198b0] hover:border-[#2a3048]'
+                filtroAtivo === f.value ? 'border-brand-blue bg-brand-blue-active text-brand-blue' : 'border-line text-fg-2 hover:border-line-2'
               }`}
             >
               {f.label}
@@ -78,28 +78,28 @@ export default function UsuariosAdminPage() {
       </div>
 
       {/* Tabela */}
-      <div className="bg-[#13161f] border border-[#1e2333] rounded-lg overflow-hidden">
+      <div className="bg-surface-1 border border-line rounded-lg overflow-hidden">
         <table className="w-full text-[13px]">
           <thead>
-            <tr className="border-b border-[#1e2333] bg-[#0f1117]">
+            <tr className="border-b border-line bg-surface-0">
               {['Usuário', 'Cargo / Órgão', 'Perfis', 'Último acesso', 'Status', ''].map(h => (
-                <th key={h} className="text-left px-5 py-3 text-[10px] font-semibold text-[#5c6282] uppercase tracking-wider">
+                <th key={h} className="text-left px-5 py-3 text-[10px] font-semibold text-fg-3 uppercase tracking-wider">
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#1e2333]">
+          <tbody className="divide-y divide-line">
             {filtrados.map(u => (
-              <tr key={u.id} className={`hover:bg-[#1c202e] transition-colors group ${!u.ativo ? 'opacity-50' : ''}`}>
+              <tr key={u.id} className={`hover:bg-surface-2 transition-colors group ${!u.ativo ? 'opacity-50' : ''}`}>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#1a1030] border border-[#2a1f50] flex items-center justify-center text-[11px] font-semibold text-[#9178e0] flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-brand-purple-soft border border-brand-purple-soft flex items-center justify-center text-[11px] font-semibold text-brand-purple flex-shrink-0">
                       {initials(u.nome)}
                     </div>
                     <div>
-                      <div className="font-medium text-[#e8eaf0]">{u.nome}</div>
-                      <div className="text-[11px] text-[#5c6282] flex items-center gap-1 mt-0.5">
+                      <div className="font-medium text-fg-1">{u.nome}</div>
+                      <div className="text-[11px] text-fg-3 flex items-center gap-1 mt-0.5">
                         <Mail size={10} />
                         {u.email}
                       </div>
@@ -107,29 +107,29 @@ export default function UsuariosAdminPage() {
                   </div>
                 </td>
                 <td className="px-4 py-3.5">
-                  <div className="text-[12px] text-[#9198b0]">{u.cargo}</div>
-                  <div className="text-[10px] text-[#5c6282] font-mono mt-0.5">{u.orgaos.join(', ')}</div>
+                  <div className="text-[12px] text-fg-2">{u.cargo}</div>
+                  <div className="text-[10px] text-fg-3 font-mono mt-0.5">{u.orgaos.join(', ')}</div>
                 </td>
                 <td className="px-4 py-3.5">
                   <div className="flex flex-wrap gap-1">
                     {u.perfis.map(p => (
-                      <span key={p} className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${perfisConfig[p] ?? 'bg-[#1c202e] text-[#9198b0]'}`}>
+                      <span key={p} className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${perfisConfig[p] ?? 'bg-surface-2 text-fg-2'}`}>
                         {p.replace(/_/g, ' ').toLowerCase()}
                       </span>
                     ))}
                   </div>
                 </td>
-                <td className="px-4 py-3.5 text-[11px] text-[#5c6282] font-mono">{u.ultimoAcesso}</td>
+                <td className="px-4 py-3.5 text-[11px] text-fg-3 font-mono">{u.ultimoAcesso}</td>
                 <td className="px-4 py-3.5">
                   <div className="flex items-center gap-1.5">
-                    <div className={`w-1.5 h-1.5 rounded-full ${u.ativo ? 'bg-[#1fa870]' : 'bg-[#5c6282]'}`} />
-                    <span className={`text-[12px] ${u.ativo ? 'text-[#1fa870]' : 'text-[#5c6282]'}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${u.ativo ? 'bg-brand-green' : 'bg-fg-3'}`} />
+                    <span className={`text-[12px] ${u.ativo ? 'text-brand-green' : 'text-fg-3'}`}>
                       {u.ativo ? 'Ativo' : 'Inativo'}
                     </span>
                   </div>
                 </td>
                 <td className="px-4 py-3.5">
-                  <button className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[11px] text-[#2d7dd2] hover:underline">
+                  <button className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[11px] text-brand-blue hover:underline">
                     Editar <ChevronDown size={10} className="rotate-[-90deg]" />
                   </button>
                 </td>
@@ -140,8 +140,8 @@ export default function UsuariosAdminPage() {
       </div>
 
       {/* Legenda de perfis */}
-      <div className="bg-[#13161f] border border-[#1e2333] rounded-lg p-4">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#5c6282] mb-3 flex items-center gap-1.5">
+      <div className="bg-surface-1 border border-line rounded-lg p-4">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-3 mb-3 flex items-center gap-1.5">
           <Shield size={11} />
           Perfis de Acesso
         </div>

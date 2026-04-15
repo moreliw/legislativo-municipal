@@ -12,8 +12,8 @@ const sections = [
   { id: 'dados', icon: Database, label: 'Dados e LGPD' },
 ]
 
-const fieldClass = "w-full bg-[#0f1117] border border-[#1e2333] rounded-md px-3 py-2 text-[13px] text-[#e8eaf0] placeholder:text-[#5c6282] focus:outline-none focus:border-[#2d7dd2] transition-colors"
-const labelClass = "text-[11px] font-medium text-[#9198b0] block mb-1.5"
+const fieldClass = "w-full bg-surface-0 border border-line rounded-md px-3 py-2 text-[13px] text-fg-1 placeholder:text-fg-3 focus:outline-none focus:border-brand-blue transition-colors"
+const labelClass = "text-[11px] font-medium text-fg-2 block mb-1.5"
 
 export default function ConfiguracoesPage() {
   const [secao, setSecao] = useState('casa')
@@ -28,15 +28,15 @@ export default function ConfiguracoesPage() {
     <div className="p-6 max-w-5xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[#e8eaf0]">Configurações</h1>
-          <p className="text-[13px] text-[#5c6282] mt-0.5">Parâmetros da casa legislativa</p>
+          <h1 className="text-xl font-semibold text-fg-1">Configurações</h1>
+          <p className="text-[13px] text-fg-3 mt-0.5">Parâmetros da casa legislativa</p>
         </div>
         <button
           onClick={handleSave}
           className={`flex items-center gap-2 text-[13px] font-medium px-4 py-2 rounded-md transition-all ${
             saved
-              ? 'bg-[#1fa870] text-white'
-              : 'bg-[#2d7dd2] hover:bg-[#1e6fbf] text-white'
+              ? 'bg-brand-green text-white'
+              : 'bg-brand-blue hover:bg-brand-blue-2 text-white'
           }`}
         >
           <Save size={14} />
@@ -53,22 +53,22 @@ export default function ConfiguracoesPage() {
               onClick={() => setSecao(s.id)}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[12px] font-medium transition-colors text-left ${
                 secao === s.id
-                  ? 'bg-[#162d4a] text-[#2d7dd2]'
-                  : 'text-[#9198b0] hover:bg-[#13161f] hover:text-[#e8eaf0]'
+                  ? 'bg-brand-blue-active text-brand-blue'
+                  : 'text-fg-2 hover:bg-surface-1 hover:text-fg-1'
               }`}
             >
-              <s.icon size={14} className={secao === s.id ? 'text-[#2d7dd2]' : 'text-[#5c6282]'} />
+              <s.icon size={14} className={secao === s.id ? 'text-brand-blue' : 'text-fg-3'} />
               {s.label}
             </button>
           ))}
         </nav>
 
         {/* Conteúdo */}
-        <div className="flex-1 bg-[#13161f] border border-[#1e2333] rounded-lg p-6">
+        <div className="flex-1 bg-surface-1 border border-line rounded-lg p-6">
 
           {secao === 'casa' && (
             <div className="space-y-5">
-              <h2 className="text-[14px] font-semibold text-[#e8eaf0] pb-3 border-b border-[#1e2333]">
+              <h2 className="text-[14px] font-semibold text-fg-1 pb-3 border-b border-line">
                 Dados da Casa Legislativa
               </h2>
               <div className="grid grid-cols-2 gap-4">
@@ -106,7 +106,7 @@ export default function ConfiguracoesPage() {
 
           {secao === 'vereadores' && (
             <div className="space-y-5">
-              <h2 className="text-[14px] font-semibold text-[#e8eaf0] pb-3 border-b border-[#1e2333]">
+              <h2 className="text-[14px] font-semibold text-fg-1 pb-3 border-b border-line">
                 Configurações de Vereadores e Quórum
               </h2>
               <div className="grid grid-cols-2 gap-4">
@@ -132,7 +132,7 @@ export default function ConfiguracoesPage() {
 
           {secao === 'calendario' && (
             <div className="space-y-5">
-              <h2 className="text-[14px] font-semibold text-[#e8eaf0] pb-3 border-b border-[#1e2333]">
+              <h2 className="text-[14px] font-semibold text-fg-1 pb-3 border-b border-line">
                 Calendário e Prazos
               </h2>
               <div className="grid grid-cols-2 gap-4">
@@ -157,15 +157,15 @@ export default function ConfiguracoesPage() {
                   <input type="number" defaultValue={3} className={fieldClass} />
                 </div>
               </div>
-              <div className="bg-[#0d1e35] border border-[#1e2333] rounded-md p-3 text-[12px] text-[#9198b0]">
-                <strong className="text-[#2d7dd2]">Nota:</strong> Os prazos respeitam o calendário de feriados. Configure os feriados municipais na seção de calendário.
+              <div className="bg-brand-blue-soft border border-line rounded-md p-3 text-[12px] text-fg-2">
+                <strong className="text-brand-blue">Nota:</strong> Os prazos respeitam o calendário de feriados. Configure os feriados municipais na seção de calendário.
               </div>
             </div>
           )}
 
           {secao === 'notificacoes' && (
             <div className="space-y-5">
-              <h2 className="text-[14px] font-semibold text-[#e8eaf0] pb-3 border-b border-[#1e2333]">
+              <h2 className="text-[14px] font-semibold text-fg-1 pb-3 border-b border-line">
                 Configurações de Notificação
               </h2>
               {[
@@ -175,14 +175,14 @@ export default function ConfiguracoesPage() {
                 { label: 'Mudanças de status', desc: 'Notificar a cada mudança de status' },
                 { label: 'Novas sessões agendadas', desc: 'Avisar quando uma sessão for agendada' },
               ].map((n, i) => (
-                <div key={i} className="flex items-start justify-between gap-4 py-3 border-b border-[#1e2333] last:border-0">
+                <div key={i} className="flex items-start justify-between gap-4 py-3 border-b border-line last:border-0">
                   <div>
-                    <div className="text-[13px] font-medium text-[#e8eaf0]">{n.label}</div>
-                    <div className="text-[11px] text-[#5c6282] mt-0.5">{n.desc}</div>
+                    <div className="text-[13px] font-medium text-fg-1">{n.label}</div>
+                    <div className="text-[11px] text-fg-3 mt-0.5">{n.desc}</div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                     <input type="checkbox" defaultChecked className="sr-only peer" />
-                    <div className="w-9 h-5 bg-[#1c202e] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-[#5c6282] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2d7dd2] peer-checked:after:bg-white" />
+                    <div className="w-9 h-5 bg-surface-2 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-fg-3 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-blue peer-checked:after:bg-white" />
                   </label>
                 </div>
               ))}
@@ -191,7 +191,7 @@ export default function ConfiguracoesPage() {
 
           {secao === 'seguranca' && (
             <div className="space-y-5">
-              <h2 className="text-[14px] font-semibold text-[#e8eaf0] pb-3 border-b border-[#1e2333]">
+              <h2 className="text-[14px] font-semibold text-fg-1 pb-3 border-b border-line">
                 Segurança e Acesso
               </h2>
               <div className="grid grid-cols-2 gap-4">
@@ -210,14 +210,14 @@ export default function ConfiguracoesPage() {
                   { label: 'Log de acesso a documentos', desc: 'Registrar cada visualização de documento' },
                   { label: 'Sessão única por usuário', desc: 'Impedir login simultâneo' },
                 ].map((s, i) => (
-                  <div key={i} className="flex items-start justify-between gap-4 py-3 border-b border-[#1e2333] last:border-0">
+                  <div key={i} className="flex items-start justify-between gap-4 py-3 border-b border-line last:border-0">
                     <div>
-                      <div className="text-[13px] font-medium text-[#e8eaf0]">{s.label}</div>
-                      <div className="text-[11px] text-[#5c6282] mt-0.5">{s.desc}</div>
+                      <div className="text-[13px] font-medium text-fg-1">{s.label}</div>
+                      <div className="text-[11px] text-fg-3 mt-0.5">{s.desc}</div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                       <input type="checkbox" defaultChecked className="sr-only peer" />
-                      <div className="w-9 h-5 bg-[#1c202e] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-[#5c6282] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2d7dd2] peer-checked:after:bg-white" />
+                      <div className="w-9 h-5 bg-surface-2 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-fg-3 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-blue peer-checked:after:bg-white" />
                     </label>
                   </div>
                 ))}
@@ -227,14 +227,14 @@ export default function ConfiguracoesPage() {
 
           {secao === 'dados' && (
             <div className="space-y-5">
-              <h2 className="text-[14px] font-semibold text-[#e8eaf0] pb-3 border-b border-[#1e2333]">
+              <h2 className="text-[14px] font-semibold text-fg-1 pb-3 border-b border-line">
                 Dados e LGPD
               </h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Retenção de logs de auditoria (dias)</label>
                   <input type="number" defaultValue={1825} className={fieldClass} />
-                  <div className="text-[10px] text-[#5c6282] mt-1">Recomendado: 5 anos (1825 dias)</div>
+                  <div className="text-[10px] text-fg-3 mt-1">Recomendado: 5 anos (1825 dias)</div>
                 </div>
                 <div>
                   <label className={labelClass}>Retenção de documentos arquivados (anos)</label>
@@ -242,14 +242,14 @@ export default function ConfiguracoesPage() {
                 </div>
               </div>
               <div className="space-y-3">
-                <div className="bg-[#2e0e0e] border border-[#d94040]/20 rounded-md p-4">
-                  <div className="text-[12px] font-semibold text-[#d94040] mb-1">⚠ Zona de Perigo</div>
-                  <div className="text-[12px] text-[#e07070] mb-3">Estas ações são irreversíveis.</div>
+                <div className="bg-brand-red-soft border border-brand-red/20 rounded-md p-4">
+                  <div className="text-[12px] font-semibold text-brand-red mb-1">⚠ Zona de Perigo</div>
+                  <div className="text-[12px] text-brand-red mb-3">Estas ações são irreversíveis.</div>
                   <div className="flex gap-2">
-                    <button className="text-[12px] border border-[#d94040]/40 text-[#d94040] hover:bg-[#d94040]/10 px-3 py-1.5 rounded-md transition-colors">
+                    <button className="text-[12px] border border-brand-red/40 text-brand-red hover:bg-brand-red/10 px-3 py-1.5 rounded-md transition-colors">
                       Exportar Auditoria Completa
                     </button>
-                    <button className="text-[12px] border border-[#d94040]/40 text-[#d94040] hover:bg-[#d94040]/10 px-3 py-1.5 rounded-md transition-colors">
+                    <button className="text-[12px] border border-brand-red/40 text-brand-red hover:bg-brand-red/10 px-3 py-1.5 rounded-md transition-colors">
                       Anonimizar Dados Sensíveis
                     </button>
                   </div>

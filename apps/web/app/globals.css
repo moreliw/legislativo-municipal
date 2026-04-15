@@ -2,29 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Light theme (default) ─────────────────────────────────────── */
 :root {
-  --ink: #0f1117;
-  --ink-2: #13161f;
-  --ink-3: #1c202e;
-  --ink-4: #252a3a;
-  --line: #1e2333;
-  --line-2: #2a3048;
-  --text: #e8eaf0;
+  /* Surfaces */
+  --surface-0: #f4f6fb;
+  --surface-1: #ffffff;
+  --surface-2: #edf0f8;
+  --surface-3: #e4e8f3;
+  --surface-sidebar: #ffffff;
+
+  /* Borders */
+  --border:   #dde2ef;
+  --border-2: #c8cedf;
+
+  /* Text */
+  --text-1: #1a1d2e;
+  --text-2: #4a5070;
+  --text-3: #8890b0;
+
+  /* Brand */
+  --blue:        #2563c0;
+  --blue-2:      #1b56b0;
+  --blue-soft:   #ddeafb;
+  --blue-active: #ddeafb;
+
+  --green:      #157a50;
+  --green-soft: #dcf5eb;
+
+  --amber:      #a85e10;
+  --amber-soft: #fef3e0;
+
+  --red:      #b82020;
+  --red-soft: #fdeaea;
+
+  --purple:      #5b3ea8;
+  --purple-soft: #ede8fb;
+}
+
+/* ── Dark theme ────────────────────────────────────────────────── */
+.dark {
+  /* Surfaces */
+  --surface-0: #0f1117;
+  --surface-1: #13161f;
+  --surface-2: #1c202e;
+  --surface-3: #252a3a;
+  --surface-sidebar: #0d0f16;
+
+  /* Borders */
+  --border:   #1e2333;
+  --border-2: #2a3048;
+
+  /* Text */
+  --text-1: #e8eaf0;
   --text-2: #9198b0;
   --text-3: #5c6282;
-  --blue: #2d7dd2;
-  --blue-2: #1e6fbf;
-  --blue-soft: #0d1e35;
-  --green: #1fa870;
+
+  /* Brand */
+  --blue:        #2d7dd2;
+  --blue-2:      #1e6fbf;
+  --blue-soft:   #0d1e35;
+  --blue-active: #162d4a;
+
+  --green:      #1fa870;
   --green-soft: #0a2318;
-  --amber: #e8a020;
+
+  --amber:      #e8a020;
   --amber-soft: #2e1f06;
-  --red: #d94040;
+
+  --red:      #d94040;
   --red-soft: #2e0e0e;
-  --purple: #7c5cbf;
+
+  --purple:      #7c5cbf;
   --purple-soft: #1a1030;
 }
 
+/* ── Base ───────────────────────────────────────────────────────── */
 * {
   box-sizing: border-box;
 }
@@ -32,46 +84,33 @@
 body {
   font-family: var(--font-sans), 'IBM Plex Sans', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  background-color: var(--surface-0);
+  color: var(--text-1);
 }
 
-/* Scrollbar custom */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--ink-2);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--line-2);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-3);
-}
+/* ── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface-2); }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
 
-/* Focus ring */
+/* ── Focus ring ─────────────────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
 }
 
-/* Transições padrão */
-.transition-default {
-  transition: all 0.15s ease;
-}
-
-/* Chip de status */
-.status-chip {
-  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
-}
-
-/* Card legislativo */
-.leg-card {
-  @apply bg-[#13161f] border border-[#1e2333] rounded-lg;
-}
-
-/* Monospace */
+/* ── Utility classes ────────────────────────────────────────────── */
 .mono {
   font-family: var(--font-mono), 'IBM Plex Mono', monospace;
+}
+
+.leg-card {
+  background-color: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.status-chip {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
 }

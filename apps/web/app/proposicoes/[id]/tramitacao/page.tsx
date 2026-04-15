@@ -12,7 +12,7 @@ export default function TramitacaoPage({ params }: { params: { id: string } }) {
   const proposicao = proposicaoMock // Em produção: fetch via API
 
   return (
-    <div className="min-h-screen bg-[#0F1117]" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+    <div className="min-h-screen bg-surface-0" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
       {/* Header da proposição */}
       <ProposicaoHeader proposicao={proposicao} />
 
@@ -27,7 +27,7 @@ export default function TramitacaoPage({ params }: { params: { id: string } }) {
 
         {/* Sidebar direita */}
         {sidebarAberta && (
-          <aside className="fixed right-0 top-16 bottom-0 w-96 border-l border-[#1E2333] bg-[#13161F] overflow-y-auto">
+          <aside className="fixed right-0 top-16 bottom-0 w-96 border-l border-line bg-surface-1 overflow-y-auto">
             <ProposicaoSidebar
               proposicao={proposicao}
               onFechar={() => setSidebarAberta(false)}
@@ -39,7 +39,7 @@ export default function TramitacaoPage({ params }: { params: { id: string } }) {
         {!sidebarAberta && (
           <button
             onClick={() => setSidebarAberta(true)}
-            className="fixed right-4 bottom-8 bg-[#2D7DD2] text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-[#1E6FBF] transition"
+            className="fixed right-4 bottom-8 bg-brand-blue text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-brand-blue-2 transition"
           >
             ← Detalhes
           </button>

@@ -29,16 +29,16 @@ const logsMock: LogAuditoria[] = [
 ]
 
 const acaoConfig: Record<string, { label: string; cor: string }> = {
-  CRIAR:    { label: 'Criar',    cor: 'text-[#1fa870]' },
-  LER:      { label: 'Ler',     cor: 'text-[#9198b0]' },
-  ATUALIZAR:{ label: 'Atualizar', cor: 'text-[#2d7dd2]' },
-  EXCLUIR:  { label: 'Excluir',  cor: 'text-[#d94040]' },
-  LOGIN:    { label: 'Login',    cor: 'text-[#2d7dd2]' },
-  LOGOUT:   { label: 'Logout',   cor: 'text-[#5c6282]' },
-  EXPORTAR: { label: 'Exportar', cor: 'text-[#e8a020]' },
-  ASSINAR:  { label: 'Assinar',  cor: 'text-[#7c5cbf]' },
-  PUBLICAR: { label: 'Publicar', cor: 'text-[#1fa870]' },
-  ARQUIVAR: { label: 'Arquivar', cor: 'text-[#5c6282]' },
+  CRIAR:    { label: 'Criar',    cor: 'text-brand-green' },
+  LER:      { label: 'Ler',     cor: 'text-fg-2' },
+  ATUALIZAR:{ label: 'Atualizar', cor: 'text-brand-blue' },
+  EXCLUIR:  { label: 'Excluir',  cor: 'text-brand-red' },
+  LOGIN:    { label: 'Login',    cor: 'text-brand-blue' },
+  LOGOUT:   { label: 'Logout',   cor: 'text-fg-3' },
+  EXPORTAR: { label: 'Exportar', cor: 'text-brand-amber' },
+  ASSINAR:  { label: 'Assinar',  cor: 'text-brand-purple' },
+  PUBLICAR: { label: 'Publicar', cor: 'text-brand-green' },
+  ARQUIVAR: { label: 'Arquivar', cor: 'text-fg-3' },
 }
 
 export default function AuditoriaPage() {
@@ -68,12 +68,12 @@ export default function AuditoriaPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[#e8eaf0]">Auditoria</h1>
-          <p className="text-[13px] text-[#5c6282] mt-0.5">
+          <h1 className="text-xl font-semibold text-fg-1">Auditoria</h1>
+          <p className="text-[13px] text-fg-3 mt-0.5">
             Log imutável de todas as operações do sistema
           </p>
         </div>
-        <button className="flex items-center gap-2 border border-[#1e2333] text-[#9198b0] hover:text-[#e8eaf0] text-[13px] px-3 py-2 rounded-md transition-colors">
+        <button className="flex items-center gap-2 border border-line text-fg-2 hover:text-fg-1 text-[13px] px-3 py-2 rounded-md transition-colors">
           <Download size={13} />
           Exportar CSV
         </button>
@@ -87,9 +87,9 @@ export default function AuditoriaPage() {
           { label: 'Usuários ativos', value: new Set(logsMock.map(l => l.usuario)).size },
           { label: 'Entidades distintas', value: new Set(logsMock.map(l => l.entidade)).size },
         ].map(s => (
-          <div key={s.label} className="bg-[#13161f] border border-[#1e2333] rounded-lg p-4">
-            <div className="text-[22px] font-bold font-mono text-[#e8eaf0]">{s.value}</div>
-            <div className="text-[11px] text-[#5c6282] mt-0.5">{s.label}</div>
+          <div key={s.label} className="bg-surface-1 border border-line rounded-lg p-4">
+            <div className="text-[22px] font-bold font-mono text-fg-1">{s.value}</div>
+            <div className="text-[11px] text-fg-3 mt-0.5">{s.label}</div>
           </div>
         ))}
       </div>
@@ -97,19 +97,19 @@ export default function AuditoriaPage() {
       {/* Filtros */}
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-48">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5c6282]" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-3" />
           <input
             type="text"
             placeholder="Buscar por entidade, usuário, endpoint..."
             value={busca}
             onChange={e => setBusca(e.target.value)}
-            className="w-full bg-[#13161f] border border-[#1e2333] rounded-md pl-8 pr-3 py-2 text-[13px] text-[#e8eaf0] placeholder:text-[#5c6282] focus:outline-none focus:border-[#2d7dd2] transition-colors"
+            className="w-full bg-surface-1 border border-line rounded-md pl-8 pr-3 py-2 text-[13px] text-fg-1 placeholder:text-fg-3 focus:outline-none focus:border-brand-blue transition-colors"
           />
         </div>
         <select
           value={acaoFiltro}
           onChange={e => setAcaoFiltro(e.target.value)}
-          className="bg-[#13161f] border border-[#1e2333] rounded-md px-3 py-2 text-[13px] text-[#9198b0] focus:outline-none"
+          className="bg-surface-1 border border-line rounded-md px-3 py-2 text-[13px] text-fg-2 focus:outline-none"
         >
           <option value="">Todas as ações</option>
           {acoesUnicas.map(a => <option key={a} value={a}>{acaoConfig[a]?.label ?? a}</option>)}
@@ -117,7 +117,7 @@ export default function AuditoriaPage() {
         <select
           value={entidadeFiltro}
           onChange={e => setEntidadeFiltro(e.target.value)}
-          className="bg-[#13161f] border border-[#1e2333] rounded-md px-3 py-2 text-[13px] text-[#9198b0] focus:outline-none"
+          className="bg-surface-1 border border-line rounded-md px-3 py-2 text-[13px] text-fg-2 focus:outline-none"
         >
           <option value="">Todas as entidades</option>
           {entidadesUnicas.map(e => <option key={e} value={e}>{e}</option>)}
@@ -125,56 +125,56 @@ export default function AuditoriaPage() {
       </div>
 
       {/* Tabela de logs */}
-      <div className="bg-[#13161f] border border-[#1e2333] rounded-lg overflow-hidden">
+      <div className="bg-surface-1 border border-line rounded-lg overflow-hidden">
         <table className="w-full text-[12px]">
           <thead>
-            <tr className="border-b border-[#1e2333] bg-[#0f1117]">
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-44">Quando</th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-20">Ação</th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-36">Entidade</th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider">Usuário</th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-28">IP</th>
+            <tr className="border-b border-line bg-surface-0">
+              <th className="text-left px-4 py-3 text-[11px] font-semibold text-fg-3 uppercase tracking-wider w-44">Quando</th>
+              <th className="text-left px-3 py-3 text-[11px] font-semibold text-fg-3 uppercase tracking-wider w-20">Ação</th>
+              <th className="text-left px-3 py-3 text-[11px] font-semibold text-fg-3 uppercase tracking-wider w-36">Entidade</th>
+              <th className="text-left px-3 py-3 text-[11px] font-semibold text-fg-3 uppercase tracking-wider">Usuário</th>
+              <th className="text-left px-3 py-3 text-[11px] font-semibold text-fg-3 uppercase tracking-wider w-28">IP</th>
               <th className="w-8"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#1e2333]">
+          <tbody className="divide-y divide-line">
             {filtrados.map(log => {
-              const ac = acaoConfig[log.acao] ?? { label: log.acao, cor: 'text-[#9198b0]' }
+              const ac = acaoConfig[log.acao] ?? { label: log.acao, cor: 'text-fg-2' }
               return (
                 <>
                   <tr
                     key={log.id}
-                    className="hover:bg-[#1c202e] transition-colors cursor-pointer group"
+                    className="hover:bg-surface-2 transition-colors cursor-pointer group"
                     onClick={() => setDetalheId(detalheId === log.id ? null : log.id)}
                   >
-                    <td className="px-4 py-3 font-mono text-[#5c6282]">
+                    <td className="px-4 py-3 font-mono text-fg-3">
                       {new Date(log.criadoEm).toLocaleString('pt-BR')}
                     </td>
                     <td className="px-3 py-3">
                       <span className={`font-semibold text-[11px] ${ac.cor}`}>{ac.label}</span>
                     </td>
                     <td className="px-3 py-3">
-                      <div className="text-[#9198b0]">{log.entidade}</div>
-                      <div className="text-[#5c6282] font-mono text-[10px] truncate max-w-[120px]">{log.entidadeId}</div>
+                      <div className="text-fg-2">{log.entidade}</div>
+                      <div className="text-fg-3 font-mono text-[10px] truncate max-w-[120px]">{log.entidadeId}</div>
                     </td>
                     <td className="px-3 py-3">
-                      <div className="text-[#e8eaf0]">{log.usuario ?? '—'}</div>
-                      <div className="text-[#5c6282] text-[10px]">{log.email ?? ''}</div>
+                      <div className="text-fg-1">{log.usuario ?? '—'}</div>
+                      <div className="text-fg-3 text-[10px]">{log.email ?? ''}</div>
                     </td>
-                    <td className="px-3 py-3 font-mono text-[#5c6282]">{log.ip}</td>
+                    <td className="px-3 py-3 font-mono text-fg-3">{log.ip}</td>
                     <td className="px-3 py-3">
-                      <Eye size={12} className="text-[#5c6282] opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <Eye size={12} className="text-fg-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </td>
                   </tr>
 
                   {/* Detalhe expandido */}
                   {detalheId === log.id && (
-                    <tr key={`${log.id}-detalhe`} className="bg-[#0f1117]">
+                    <tr key={`${log.id}-detalhe`} className="bg-surface-0">
                       <td colSpan={6} className="px-5 py-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <div className="text-[10px] font-semibold text-[#5c6282] uppercase tracking-wider mb-2">Endpoint</div>
-                            <code className="text-[11px] text-[#9198b0] font-mono bg-[#13161f] border border-[#1e2333] rounded px-2 py-1 block">
+                            <div className="text-[10px] font-semibold text-fg-3 uppercase tracking-wider mb-2">Endpoint</div>
+                            <code className="text-[11px] text-fg-2 font-mono bg-surface-1 border border-line rounded px-2 py-1 block">
                               {log.endpoint}
                             </code>
                           </div>
@@ -182,16 +182,16 @@ export default function AuditoriaPage() {
                             <div className="grid grid-cols-2 gap-2">
                               {log.dadosAntes && (
                                 <div>
-                                  <div className="text-[10px] font-semibold text-[#d94040] uppercase tracking-wider mb-1">Antes</div>
-                                  <pre className="text-[10px] font-mono text-[#9198b0] bg-[#13161f] border border-[#1e2333] rounded p-2 overflow-x-auto">
+                                  <div className="text-[10px] font-semibold text-brand-red uppercase tracking-wider mb-1">Antes</div>
+                                  <pre className="text-[10px] font-mono text-fg-2 bg-surface-1 border border-line rounded p-2 overflow-x-auto">
                                     {JSON.stringify(log.dadosAntes, null, 2)}
                                   </pre>
                                 </div>
                               )}
                               {log.dadosDepois && (
                                 <div>
-                                  <div className="text-[10px] font-semibold text-[#1fa870] uppercase tracking-wider mb-1">Depois</div>
-                                  <pre className="text-[10px] font-mono text-[#9198b0] bg-[#13161f] border border-[#1e2333] rounded p-2 overflow-x-auto">
+                                  <div className="text-[10px] font-semibold text-brand-green uppercase tracking-wider mb-1">Depois</div>
+                                  <pre className="text-[10px] font-mono text-fg-2 bg-surface-1 border border-line rounded p-2 overflow-x-auto">
                                     {JSON.stringify(log.dadosDepois, null, 2)}
                                   </pre>
                                 </div>
@@ -209,16 +209,16 @@ export default function AuditoriaPage() {
         </table>
 
         {filtrados.length === 0 && (
-          <div className="py-16 text-center text-[#5c6282] text-[13px]">
+          <div className="py-16 text-center text-fg-3 text-[13px]">
             Nenhum log encontrado com os filtros selecionados.
           </div>
         )}
       </div>
 
       {/* Aviso LGPD */}
-      <div className="bg-[#0d1e35] border border-[#1e2333] rounded-lg px-4 py-3 flex items-start gap-3">
-        <Shield size={14} className="text-[#2d7dd2] flex-shrink-0 mt-0.5" />
-        <div className="text-[12px] text-[#5c6282]">
+      <div className="bg-brand-blue-soft border border-line rounded-lg px-4 py-3 flex items-start gap-3">
+        <Shield size={14} className="text-brand-blue flex-shrink-0 mt-0.5" />
+        <div className="text-[12px] text-fg-3">
           Os logs de auditoria são imutáveis e retidos por 5 anos conforme a política de governança de dados.
           Dados pessoais são tratados em conformidade com a LGPD (Lei 13.709/2018).
         </div>

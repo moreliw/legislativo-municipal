@@ -9,7 +9,7 @@ function createApiClient(): AxiosInstance {
     timeout: 30000,
   })
 
-  // Inject JWT from localStorage/cookie
+  // Inject JWT from localStorage on every request
   client.interceptors.request.use((config) => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('access_token')
@@ -18,11 +18,15 @@ function createApiClient(): AxiosInstance {
     return config
   })
 
-  // Handle 401 globally
+  // Handle 401: redirect to login once, no retry loop
+  let isRedirecting = false
   client.interceptors.response.use(
     res => res,
     err => {
-      if (err.response?.status === 401 && typeof window !== 'undefined') {
+      const status = err.response?.status
+      if (status === 401 && typeof window !== 'undefined' && !isRedirecting) {
+        isRedirecting = true
+        localStorage.removeItem('access_token')
         window.location.href = '/login'
       }
       return Promise.reject(err)

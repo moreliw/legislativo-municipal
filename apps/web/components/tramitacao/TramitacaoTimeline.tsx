@@ -5,26 +5,26 @@ import { ChevronDown, ChevronUp, Paperclip, User } from 'lucide-react'
 import type { TramitacaoEvento } from '@/lib/api'
 
 const tipoConfig: Record<string, { label: string; cor: string; icone: string }> = {
-  PROTOCOLO:        { label: 'Protocolo',        cor: '#7ab8f5', icone: '📥' },
-  DISTRIBUICAO:     { label: 'Distribuição',     cor: '#8fb8e8', icone: '📋' },
-  DESPACHO:         { label: 'Despacho',         cor: '#e8a020', icone: '📝' },
-  PARECER_JURIDICO: { label: 'Parecer Jurídico', cor: '#9178e0', icone: '⚖️' },
-  PARECER_COMISSAO: { label: 'Parecer Comissão', cor: '#1fa870', icone: '📊' },
-  ENCAMINHAMENTO:   { label: 'Encaminhamento',   cor: '#60b8a0', icone: '➡️' },
-  INCLUSAO_PAUTA:   { label: 'Inclusão em Pauta',cor: '#e8a020', icone: '📅' },
-  VOTACAO:          { label: 'Votação',           cor: '#f5a623', icone: '🗳️' },
-  APROVACAO:        { label: 'Aprovação',         cor: '#1fa870', icone: '✅' },
-  REJEICAO:         { label: 'Rejeição',          cor: '#d94040', icone: '❌' },
-  DEVOLUCAO:        { label: 'Devolução',         cor: '#d94040', icone: '↩️' },
-  SUSPENSAO:        { label: 'Suspensão',         cor: '#e8a020', icone: '⏸️' },
-  REATIVACAO:       { label: 'Reativação',        cor: '#1fa870', icone: '▶️' },
-  REDACAO_FINAL:    { label: 'Redação Final',     cor: '#2d7dd2', icone: '✍️' },
-  ASSINATURA:       { label: 'Assinatura',        cor: '#7c5cbf', icone: '🖊️' },
-  PUBLICACAO:       { label: 'Publicação',        cor: '#1fa870', icone: '📰' },
-  ARQUIVAMENTO:     { label: 'Arquivamento',      cor: '#5c6282', icone: '🗂️' },
-  REABERTURA:       { label: 'Reabertura',        cor: '#2d7dd2', icone: '🔓' },
-  SESSAO_LEITURA:   { label: 'Leitura em Sessão', cor: '#60b8a0', icone: '📢' },
-  RETIFICACAO:      { label: 'Retificação',       cor: '#e8a020', icone: '✏️' },
+  PROTOCOLO:        { label: 'Protocolo',        cor: 'var(--blue)', icone: '📥' },
+  DISTRIBUICAO:     { label: 'Distribuição',     cor: 'var(--blue)', icone: '📋' },
+  DESPACHO:         { label: 'Despacho',         cor: 'var(--amber)', icone: '📝' },
+  PARECER_JURIDICO: { label: 'Parecer Jurídico', cor: 'var(--purple)', icone: '⚖️' },
+  PARECER_COMISSAO: { label: 'Parecer Comissão', cor: 'var(--green)', icone: '📊' },
+  ENCAMINHAMENTO:   { label: 'Encaminhamento',   cor: 'var(--green)', icone: '➡️' },
+  INCLUSAO_PAUTA:   { label: 'Inclusão em Pauta',cor: 'var(--amber)', icone: '📅' },
+  VOTACAO:          { label: 'Votação',           cor: 'var(--amber)', icone: '🗳️' },
+  APROVACAO:        { label: 'Aprovação',         cor: 'var(--green)', icone: '✅' },
+  REJEICAO:         { label: 'Rejeição',          cor: 'var(--red)', icone: '❌' },
+  DEVOLUCAO:        { label: 'Devolução',         cor: 'var(--red)', icone: '↩️' },
+  SUSPENSAO:        { label: 'Suspensão',         cor: 'var(--amber)', icone: '⏸️' },
+  REATIVACAO:       { label: 'Reativação',        cor: 'var(--green)', icone: '▶️' },
+  REDACAO_FINAL:    { label: 'Redação Final',     cor: 'var(--blue)', icone: '✍️' },
+  ASSINATURA:       { label: 'Assinatura',        cor: 'var(--purple)', icone: '🖊️' },
+  PUBLICACAO:       { label: 'Publicação',        cor: 'var(--green)', icone: '📰' },
+  ARQUIVAMENTO:     { label: 'Arquivamento',      cor: 'var(--text-3)', icone: '🗂️' },
+  REABERTURA:       { label: 'Reabertura',        cor: 'var(--blue)', icone: '🔓' },
+  SESSAO_LEITURA:   { label: 'Leitura em Sessão', cor: 'var(--green)', icone: '📢' },
+  RETIFICACAO:      { label: 'Retificação',       cor: 'var(--amber)', icone: '✏️' },
 }
 
 function initials(name: string): string {
@@ -54,16 +54,16 @@ interface CardEventoProps {
 }
 
 function CardEvento({ evento, lado, atual, expandido, onToggle }: CardEventoProps) {
-  const cfg = tipoConfig[evento.tipo] ?? { label: evento.tipo, cor: '#5c6282', icone: '●' }
+  const cfg = tipoConfig[evento.tipo] ?? { label: evento.tipo, cor: 'var(--text-3)', icone: '●' }
 
   return (
     <div
       className={`rounded-lg border cursor-pointer transition-all select-none ${
         atual
-          ? 'border-[#e8a020] bg-[#2e1f06]'
+          ? 'border-brand-amber bg-brand-amber-soft'
           : expandido
-          ? 'border-[#2d7dd2] bg-[#0d1e35]'
-          : 'border-[#1e2333] bg-[#13161f] hover:bg-[#1c202e] hover:border-[#2a3048]'
+          ? 'border-brand-blue bg-brand-blue-soft'
+          : 'border-line bg-surface-1 hover:bg-surface-2 hover:border-line-2'
       } ${lado === 'esquerda' ? 'mr-4' : 'ml-4'}`}
       onClick={onToggle}
     >
@@ -78,14 +78,14 @@ function CardEvento({ evento, lado, atual, expandido, onToggle }: CardEventoProp
             {cfg.label}
           </span>
           {expandido ? (
-            <ChevronUp size={12} className="text-[#5c6282]" />
+            <ChevronUp size={12} className="text-fg-3" />
           ) : (
-            <ChevronDown size={12} className="text-[#5c6282]" />
+            <ChevronDown size={12} className="text-fg-3" />
           )}
         </div>
 
         {/* Descrição */}
-        <p className={`text-[12px] leading-snug ${expandido ? 'text-[#e8eaf0]' : 'text-[#9198b0] line-clamp-2'}`}>
+        <p className={`text-[12px] leading-snug ${expandido ? 'text-fg-1' : 'text-fg-2 line-clamp-2'}`}>
           {evento.descricao}
         </p>
 
@@ -95,17 +95,17 @@ function CardEvento({ evento, lado, atual, expandido, onToggle }: CardEventoProp
             <div className="flex items-center gap-1.5">
               <div
                 className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0"
-                style={{ background: '#1a1030', color: '#9178e0', border: '1px solid #2a1f50' }}
+                style={{ background: 'var(--purple-soft)', color: 'var(--purple)', border: '1px solid var(--purple-soft)' }}
               >
                 {initials(evento.usuario.nome)}
               </div>
-              <span className="text-[10px] text-[#5c6282] truncate max-w-[100px]">
+              <span className="text-[10px] text-fg-3 truncate max-w-[100px]">
                 {evento.usuario.nome.split(' ')[0]}
                 {evento.orgaoOrigem ? ` · ${evento.orgaoOrigem.sigla}` : ''}
               </span>
             </div>
           )}
-          <span className="text-[10px] font-mono text-[#5c6282] ml-auto">
+          <span className="text-[10px] font-mono text-fg-3 ml-auto">
             {formatarHora(evento.criadoEm)}
           </span>
         </div>
@@ -113,15 +113,15 @@ function CardEvento({ evento, lado, atual, expandido, onToggle }: CardEventoProp
 
       {/* Detalhes expandidos */}
       {expandido && (
-        <div className="px-4 pb-4 pt-0 border-t border-[#1e2333] mt-0">
+        <div className="px-4 pb-4 pt-0 border-t border-line mt-0">
           <div className="mt-3 space-y-2.5">
             {/* Observação */}
             {evento.observacao && (
               <div>
-                <div className="text-[10px] font-semibold text-[#5c6282] uppercase tracking-wide mb-1">
+                <div className="text-[10px] font-semibold text-fg-3 uppercase tracking-wide mb-1">
                   Observação
                 </div>
-                <p className="text-[12px] text-[#9198b0] leading-relaxed italic">
+                <p className="text-[12px] text-fg-2 leading-relaxed italic">
                   "{evento.observacao}"
                 </p>
               </div>
@@ -130,11 +130,11 @@ function CardEvento({ evento, lado, atual, expandido, onToggle }: CardEventoProp
             {/* Transição de status */}
             {evento.statusAntes && evento.statusDepois && evento.statusAntes !== evento.statusDepois && (
               <div className="flex items-center gap-2 text-[11px]">
-                <span className="bg-[#1c202e] text-[#5c6282] px-2 py-0.5 rounded font-mono">
+                <span className="bg-surface-2 text-fg-3 px-2 py-0.5 rounded font-mono">
                   {evento.statusAntes}
                 </span>
-                <span className="text-[#5c6282]">→</span>
-                <span className="bg-[#0d1e35] text-[#2d7dd2] px-2 py-0.5 rounded font-mono">
+                <span className="text-fg-3">→</span>
+                <span className="bg-brand-blue-soft text-brand-blue px-2 py-0.5 rounded font-mono">
                   {evento.statusDepois}
                 </span>
               </div>
@@ -143,16 +143,16 @@ function CardEvento({ evento, lado, atual, expandido, onToggle }: CardEventoProp
             {/* Documentos gerados */}
             {evento.documentosGerados && evento.documentosGerados.length > 0 && (
               <div>
-                <div className="text-[10px] font-semibold text-[#5c6282] uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                <div className="text-[10px] font-semibold text-fg-3 uppercase tracking-wide mb-1.5 flex items-center gap-1">
                   <Paperclip size={9} /> Documentos
                 </div>
                 <div className="space-y-1">
                   {evento.documentosGerados.map(({ documento }) => (
                     <div
                       key={documento.id}
-                      className="flex items-center gap-2 text-[11px] text-[#9198b0] hover:text-[#2d7dd2] cursor-pointer transition-colors"
+                      className="flex items-center gap-2 text-[11px] text-fg-2 hover:text-brand-blue cursor-pointer transition-colors"
                     >
-                      <span className="font-mono text-[9px] bg-[#0f1117] border border-[#1e2333] px-1.5 py-0.5 rounded text-[#5c6282]">
+                      <span className="font-mono text-[9px] bg-surface-0 border border-line px-1.5 py-0.5 rounded text-fg-3">
                         {documento.tipo.substring(0, 3)}
                       </span>
                       {documento.nome}
@@ -165,7 +165,7 @@ function CardEvento({ evento, lado, atual, expandido, onToggle }: CardEventoProp
             {/* Dados adicionais relevantes */}
             {evento.dadosAdicionais && Object.keys(evento.dadosAdicionais).length > 0 && (
               <div>
-                <div className="text-[10px] font-semibold text-[#5c6282] uppercase tracking-wide mb-1.5">
+                <div className="text-[10px] font-semibold text-fg-3 uppercase tracking-wide mb-1.5">
                   Dados
                 </div>
                 <div className="space-y-1">
@@ -174,8 +174,8 @@ function CardEvento({ evento, lado, atual, expandido, onToggle }: CardEventoProp
                     .slice(0, 4)
                     .map(([k, v]) => (
                       <div key={k} className="flex gap-2 text-[11px]">
-                        <span className="text-[#5c6282] capitalize">{k.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                        <span className="text-[#9198b0] font-mono">{String(v)}</span>
+                        <span className="text-fg-3 capitalize">{k.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                        <span className="text-fg-2 font-mono">{String(v)}</span>
                       </div>
                     ))}
                 </div>
@@ -184,9 +184,9 @@ function CardEvento({ evento, lado, atual, expandido, onToggle }: CardEventoProp
 
             {/* Usuário completo */}
             {evento.usuario && (
-              <div className="flex items-center gap-2 pt-1 border-t border-[#1e2333]">
-                <User size={10} className="text-[#5c6282]" />
-                <span className="text-[11px] text-[#5c6282]">
+              <div className="flex items-center gap-2 pt-1 border-t border-line">
+                <User size={10} className="text-fg-3" />
+                <span className="text-[11px] text-fg-3">
                   {evento.usuario.nome}
                   {evento.usuario.cargo ? ` · ${evento.usuario.cargo}` : ''}
                 </span>
@@ -240,8 +240,8 @@ export default function TramitacaoTimeline({ eventos }: TramitacaoTimelineProps)
             onClick={() => setFiltro(f.id)}
             className={`text-[12px] px-3 py-1.5 rounded-full border transition-colors ${
               filtro === f.id
-                ? 'bg-[#162d4a] border-[#2d7dd2] text-[#2d7dd2]'
-                : 'border-[#1e2333] text-[#9198b0] hover:border-[#2a3048]'
+                ? 'bg-brand-blue-active border-brand-blue text-brand-blue'
+                : 'border-line text-fg-2 hover:border-line-2'
             }`}
           >
             {f.label}
@@ -252,14 +252,14 @@ export default function TramitacaoTimeline({ eventos }: TramitacaoTimelineProps)
             )}
           </button>
         ))}
-        <span className="text-[11px] text-[#5c6282] ml-auto">
+        <span className="text-[11px] text-fg-3 ml-auto">
           {filtrados.length} evento{filtrados.length !== 1 ? 's' : ''}
         </span>
       </div>
 
       {/* Timeline */}
       {filtrados.length === 0 ? (
-        <div className="text-center py-12 text-[#5c6282] text-[13px]">
+        <div className="text-center py-12 text-fg-3 text-[13px]">
           Nenhum evento neste filtro.
         </div>
       ) : (
@@ -268,7 +268,7 @@ export default function TramitacaoTimeline({ eventos }: TramitacaoTimelineProps)
             const isEsquerda = idx % 2 === 0
             const isAtual = evento.id === ultimoId
             const isExpanded = expandidos.has(evento.id)
-            const cfg = tipoConfig[evento.tipo] ?? { cor: '#5c6282' }
+            const cfg = tipoConfig[evento.tipo] ?? { cor: 'var(--text-3)' }
 
             return (
               <div key={evento.id} className="flex items-start gap-0 mb-2">
@@ -288,14 +288,14 @@ export default function TramitacaoTimeline({ eventos }: TramitacaoTimelineProps)
                 {/* Eixo central */}
                 <div className="flex flex-col items-center flex-shrink-0 w-24">
                   {/* Data */}
-                  <div className="font-mono text-[10px] text-[#5c6282] bg-[#0f1117] border border-[#1e2333] rounded px-2 py-0.5 mb-2 whitespace-nowrap">
+                  <div className="font-mono text-[10px] text-fg-3 bg-surface-0 border border-line rounded px-2 py-0.5 mb-2 whitespace-nowrap">
                     {formatarData(evento.criadoEm)}
                   </div>
 
                   {/* Ponto */}
                   <div
-                    className={`w-3.5 h-3.5 rounded-full border-2 border-[#0f1117] flex-shrink-0 z-10 transition-all ${
-                      isAtual ? 'ring-2 ring-offset-1 ring-offset-[#0f1117]' : ''
+                    className={`w-3.5 h-3.5 rounded-full border-2 border-surface-0 flex-shrink-0 z-10 transition-all ${
+                      isAtual ? 'ring-2 ring-offset-1 ring-offset-surface-0' : ''
                     }`}
                     style={{
                       backgroundColor: cfg.cor,
@@ -305,7 +305,7 @@ export default function TramitacaoTimeline({ eventos }: TramitacaoTimelineProps)
 
                   {/* Linha vertical (exceto último) */}
                   {idx < filtrados.length - 1 && (
-                    <div className="w-px flex-1 min-h-[40px] mt-1" style={{ background: '#1e2333' }} />
+                    <div className="w-px flex-1 min-h-[40px] mt-1" style={{ background: 'var(--border)' }} />
                   )}
                 </div>
 
@@ -327,7 +327,7 @@ export default function TramitacaoTimeline({ eventos }: TramitacaoTimelineProps)
 
           {/* Fim da timeline */}
           <div className="flex justify-center mt-4">
-            <div className="text-[11px] text-[#5c6282] border border-dashed border-[#1e2333] rounded px-3 py-1.5">
+            <div className="text-[11px] text-fg-3 border border-dashed border-line rounded px-3 py-1.5">
               {filtrados.length} evento{filtrados.length !== 1 ? 's' : ''} · Início em {formatarData(filtrados[0]?.criadoEm ?? '')}
             </div>
           </div>

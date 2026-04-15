@@ -45,3 +45,7 @@ infra/docker/data/
 
 # Uploads (local dev)
 uploads/
+
+# Claude Code
+.claude/
+
