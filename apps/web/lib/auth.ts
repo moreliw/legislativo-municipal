@@ -96,7 +96,8 @@ export async function refreshToken(): Promise<boolean> {
 
 export async function apiFetch<T = unknown>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  _retried = false
 ): Promise<T> {
   let token = getToken()
 
@@ -104,7 +105,7 @@ export async function apiFetch<T = unknown>(
   const exp = localStorage.getItem(EXP_KEY)
   if (exp && Date.now() > parseInt(exp) - 60_000) {
     const ok = await refreshToken()
-    if (!ok) { window.location.href = '/login'; throw new Error('Sessão expirada') }
+    if (!ok) { clearAuth(); window.location.href = '/login'; throw new Error('Sessão expirada') }
     token = getToken()
   }
 
@@ -119,10 +120,12 @@ export async function apiFetch<T = unknown>(
   })
 
   if (res.status === 401) {
-    // Tentar renovar uma vez
-    const ok = await refreshToken()
-    if (ok) {
-      return apiFetch<T>(path, options)  // retry
+    // Tentar renovar somente uma vez — nunca entrar em loop infinito
+    if (!_retried) {
+      const ok = await refreshToken()
+      if (ok) {
+        return apiFetch<T>(path, options, true)
+      }
     }
     clearAuth()
     window.location.href = '/login'
