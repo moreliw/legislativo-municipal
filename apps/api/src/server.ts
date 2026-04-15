@@ -21,6 +21,7 @@ import { publicacaoRoutes }    from './modules/publicacao/routes'
 import { buscaRoutes }         from './modules/busca/routes'
 import { notificacoesRoutes }  from './modules/notificacoes/routes'
 import { exportacaoRoutes }    from './modules/exportacao/routes'
+import { sistemaRoutes }       from './modules/sistema/routes'
 import { swaggerPlugin }       from './plugins/swagger'
 import { authPlugin }          from './plugins/auth'
 import { auditoriaPlugin }     from './plugins/auditoria'
@@ -102,6 +103,9 @@ export async function build() {
   await app.register(buscaRoutes,        { prefix: `${v1}/busca` })
   await app.register(notificacoesRoutes, { prefix: `${v1}/notificacoes` })
   await app.register(exportacaoRoutes,   { prefix: `${v1}/exportar` })
+
+  // ── Administração do Sistema (Superadmin) ────────────────────────
+  await app.register(sistemaRoutes,      { prefix: `${v1}/sistema` })
 
   // ── Portal público ────────────────────────────────────────────────
   await app.register(publicacaoRoutes,   { prefix: `${v1}/publicacao` })

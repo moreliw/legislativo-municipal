@@ -579,9 +579,9 @@ async function authRoutes(app) {
     if (!req.user) {
       return reply.status(401).send({ error: "Unauthorized" });
     }
-    const { PrismaClient: PrismaClient20 } = await import("@prisma/client");
-    const prisma20 = new PrismaClient20();
-    const sessoes = await prisma20.sessaoAuth.findMany({
+    const { PrismaClient: PrismaClient21 } = await import("@prisma/client");
+    const prisma21 = new PrismaClient21();
+    const sessoes = await prisma21.sessaoAuth.findMany({
       where: {
         credencial: { usuarioId: req.user.id },
         ativo: true,
@@ -597,9 +597,9 @@ async function authRoutes(app) {
       return reply.status(401).send({ error: "Unauthorized" });
     }
     const { id } = req.params;
-    const { PrismaClient: PrismaClient20 } = await import("@prisma/client");
-    const prisma20 = new PrismaClient20();
-    await prisma20.sessaoAuth.updateMany({
+    const { PrismaClient: PrismaClient21 } = await import("@prisma/client");
+    const prisma21 = new PrismaClient21();
+    await prisma21.sessaoAuth.updateMany({
       where: {
         id,
         credencial: { usuarioId: req.user.id }
@@ -3504,6 +3504,196 @@ async function exportacaoRoutes(app) {
   });
 }
 
+// src/modules/sistema/routes.ts
+var import_client20 = require("@prisma/client");
+var import_bcryptjs2 = __toESM(require("bcryptjs"));
+var import_zod6 = require("zod");
+var prisma20 = new import_client20.PrismaClient();
+function requireSuperAdmin(req, reply, done) {
+  const user = req.user;
+  if (!user) return reply.status(401).send({ error: "Unauthorized" });
+  if (user.casaId !== "sistema" && !user.permissoes.includes("sistema:*")) {
+    return reply.status(403).send({ error: "Forbidden", message: "Acesso restrito ao superadministrador" });
+  }
+  done();
+}
+var criarCasaSchema = import_zod6.z.object({
+  nome: import_zod6.z.string().min(5, "Nome muito curto"),
+  sigla: import_zod6.z.string().min(2).max(10).toUpperCase(),
+  cnpj: import_zod6.z.string().regex(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/, "CNPJ inv\xE1lido"),
+  municipio: import_zod6.z.string().min(3),
+  uf: import_zod6.z.string().length(2).toUpperCase(),
+  email: import_zod6.z.string().email().optional(),
+  telefone: import_zod6.z.string().optional(),
+  site: import_zod6.z.string().url().optional().or(import_zod6.z.literal("")),
+  totalVereadores: import_zod6.z.number().int().min(7).max(55).default(9),
+  // Credenciais do admin inicial da câmara
+  adminNome: import_zod6.z.string().min(3),
+  adminEmail: import_zod6.z.string().email(),
+  adminSenha: import_zod6.z.string().min(8)
+});
+async function sistemaRoutes(app) {
+  app.get("/casas", { preHandler: requireSuperAdmin }, async (req) => {
+    const casas = await prisma20.casaLegislativa.findMany({
+      where: { sigla: { not: "SISTEMA" } },
+      include: {
+        _count: { select: { usuarios: true, proposicoes: true, sessoes: true } }
+      },
+      orderBy: { criadoEm: "desc" }
+    });
+    return casas;
+  });
+  app.get("/casas/:id", { preHandler: requireSuperAdmin }, async (req, reply) => {
+    const { id } = req.params;
+    const casa = await prisma20.casaLegislativa.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { usuarios: true, proposicoes: true, sessoes: true } },
+        usuarios: {
+          take: 10,
+          select: { id: true, nome: true, email: true, cargo: true, ativo: true, criadoEm: true },
+          orderBy: { criadoEm: "asc" }
+        }
+      }
+    });
+    if (!casa) return reply.status(404).send({ error: "C\xE2mara n\xE3o encontrada" });
+    return casa;
+  });
+  app.post("/casas", { preHandler: requireSuperAdmin }, async (req, reply) => {
+    try {
+      const body = criarCasaSchema.parse(req.body);
+      const existente = await prisma20.casaLegislativa.findFirst({
+        where: { OR: [{ sigla: body.sigla }, { cnpj: body.cnpj }] }
+      });
+      if (existente) {
+        return reply.status(409).send({
+          error: "Conflict",
+          message: existente.sigla === body.sigla ? `Sigla ${body.sigla} j\xE1 est\xE1 em uso` : `CNPJ ${body.cnpj} j\xE1 cadastrado`
+        });
+      }
+      const quorumSimples = Math.floor(body.totalVereadores / 2) + 1;
+      const resultado = await prisma20.$transaction(async (tx) => {
+        const casa = await tx.casaLegislativa.create({
+          data: {
+            nome: body.nome,
+            sigla: body.sigla,
+            cnpj: body.cnpj,
+            municipio: body.municipio,
+            uf: body.uf,
+            email: body.email,
+            telefone: body.telefone,
+            site: body.site || null,
+            configuracoes: {
+              totalVereadores: body.totalVereadores,
+              quorumSimples,
+              quorumQualificado: Math.ceil(body.totalVereadores * 2 / 3),
+              legislatura: `${(/* @__PURE__ */ new Date()).getFullYear()}-${(/* @__PURE__ */ new Date()).getFullYear() + 3}`
+            },
+            ativo: true
+          }
+        });
+        const [pAdmin, pSecretario, pVereador, pJuridico, pConsulta] = await Promise.all([
+          tx.perfil.create({ data: { casaId: casa.id, nome: "ADMINISTRADOR", descricao: "Acesso total", permissoes: ["*:*"] } }),
+          tx.perfil.create({ data: { casaId: casa.id, nome: "SECRETARIO_LEGISLATIVO", descricao: "Gest\xE3o legislativa", permissoes: ["proposicoes:ler", "proposicoes:criar", "proposicoes:editar", "tramitacao:ler", "tramitacao:criar", "sessoes:ler", "sessoes:criar", "sessoes:editar", "documentos:ler", "documentos:criar", "usuarios:ler", "busca:ler", "notificacoes:ler", "relatorios:ler"] } }),
+          tx.perfil.create({ data: { casaId: casa.id, nome: "VEREADOR", descricao: "Vereador eleito", permissoes: ["proposicoes:ler", "proposicoes:criar", "tramitacao:ler", "sessoes:ler", "documentos:ler", "busca:ler", "notificacoes:ler"] } }),
+          tx.perfil.create({ data: { casaId: casa.id, nome: "JURIDICO", descricao: "Assessoria jur\xEDdica", permissoes: ["proposicoes:ler", "tramitacao:ler", "tramitacao:criar", "documentos:ler", "documentos:criar", "busca:ler"] } }),
+          tx.perfil.create({ data: { casaId: casa.id, nome: "CONSULTA", descricao: "Somente leitura", permissoes: ["proposicoes:ler", "sessoes:ler", "documentos:ler", "busca:ler"] } })
+        ]);
+        await Promise.all([
+          tx.orgao.create({ data: { casaId: casa.id, nome: "Presid\xEAncia", sigla: "PRES", tipo: "PRESIDENCIA", ativo: true } }),
+          tx.orgao.create({ data: { casaId: casa.id, nome: "Secretaria Legislativa", sigla: "SEC", tipo: "SECRETARIA", ativo: true } }),
+          tx.orgao.create({ data: { casaId: casa.id, nome: "Protocolo", sigla: "PROTO", tipo: "PROTOCOLO", ativo: true } }),
+          tx.orgao.create({ data: { casaId: casa.id, nome: "Assessoria Jur\xEDdica", sigla: "JUR", tipo: "PROCURADORIA", ativo: true } }),
+          tx.orgao.create({ data: { casaId: casa.id, nome: "Plen\xE1rio", sigla: "PLN", tipo: "PLENARIO", ativo: true } }),
+          tx.orgao.create({ data: { casaId: casa.id, nome: "Comiss\xE3o de Finan\xE7as", sigla: "CFO", tipo: "COMISSAO_PERMANENTE", ativo: true } }),
+          tx.orgao.create({ data: { casaId: casa.id, nome: "Comiss\xE3o de Justi\xE7a", sigla: "CJIP", tipo: "COMISSAO_PERMANENTE", ativo: true } })
+        ]);
+        await Promise.all([
+          tx.tipoMateria.create({ data: { casaId: casa.id, nome: "Projeto de Lei", sigla: "PL", prefixoNumero: "PL", exigeParecerJuridico: true, exigeComissao: true, prazoTramitacao: 60 } }),
+          tx.tipoMateria.create({ data: { casaId: casa.id, nome: "Projeto de Lei Complementar", sigla: "PLC", prefixoNumero: "PLC", exigeParecerJuridico: true, prazoTramitacao: 60 } }),
+          tx.tipoMateria.create({ data: { casaId: casa.id, nome: "Emenda \xE0 Lei Org\xE2nica", sigla: "PELO", prefixoNumero: "PELO", exigeParecerJuridico: true, prazoTramitacao: 90 } }),
+          tx.tipoMateria.create({ data: { casaId: casa.id, nome: "Decreto Legislativo", sigla: "DL", prefixoNumero: "DL", exigeParecerJuridico: true, prazoTramitacao: 30 } }),
+          tx.tipoMateria.create({ data: { casaId: casa.id, nome: "Mo\xE7\xE3o", sigla: "MOC", prefixoNumero: "MOC", exigeComissao: false, prazoTramitacao: 15 } }),
+          tx.tipoMateria.create({ data: { casaId: casa.id, nome: "Requerimento", sigla: "REQ", prefixoNumero: "REQ", exigeComissao: false, prazoTramitacao: 10 } }),
+          tx.tipoMateria.create({ data: { casaId: casa.id, nome: "Indica\xE7\xE3o", sigla: "IND", prefixoNumero: "IND", exigeComissao: false, prazoTramitacao: 10 } })
+        ]);
+        const senhaHash = await import_bcryptjs2.default.hash(body.adminSenha, 12);
+        const adminUser = await tx.usuario.create({
+          data: {
+            casaId: casa.id,
+            nome: body.adminNome,
+            email: body.adminEmail,
+            cargo: "Administrador",
+            ativo: true
+          }
+        });
+        await tx.credencialUsuario.create({
+          data: { usuarioId: adminUser.id, senhaHash, precisaTrocar: true }
+        });
+        await tx.usuarioPerfil.create({
+          data: { usuarioId: adminUser.id, perfilId: pAdmin.id }
+        });
+        return { casa, adminUser };
+      });
+      return reply.status(201).send({
+        message: "C\xE2mara criada com sucesso!",
+        casa: {
+          id: resultado.casa.id,
+          nome: resultado.casa.nome,
+          sigla: resultado.casa.sigla,
+          municipio: resultado.casa.municipio,
+          uf: resultado.casa.uf
+        },
+        adminLogin: {
+          email: body.adminEmail,
+          senha: body.adminSenha,
+          aviso: "Troca de senha obrigat\xF3ria no primeiro acesso"
+        },
+        estrutura: {
+          perfis: 5,
+          orgaos: 7,
+          tiposMateria: 7
+        }
+      });
+    } catch (err) {
+      if (err?.name === "ZodError") {
+        return reply.status(400).send({ error: "ValidationError", issues: err.errors });
+      }
+      throw err;
+    }
+  });
+  app.patch("/casas/:id", { preHandler: requireSuperAdmin }, async (req, reply) => {
+    const { id } = req.params;
+    const { ativo } = req.body;
+    const casa = await prisma20.casaLegislativa.update({
+      where: { id },
+      data: { ativo }
+    });
+    return reply.status(200).send({ message: `C\xE2mara ${ativo ? "ativada" : "desativada"}`, casa });
+  });
+  app.get("/stats", { preHandler: requireSuperAdmin }, async () => {
+    const [totalCasas, totalUsuarios, totalProposicoes, totalSessoes, casasPorUF] = await Promise.all([
+      prisma20.casaLegislativa.count({ where: { ativo: true, sigla: { not: "SISTEMA" } } }),
+      prisma20.usuario.count({ where: { ativo: true, casa: { sigla: { not: "SISTEMA" } } } }),
+      prisma20.proposicao.count(),
+      prisma20.sessaoLegislativa.count(),
+      prisma20.casaLegislativa.groupBy({
+        by: ["uf"],
+        where: { ativo: true, sigla: { not: "SISTEMA" } },
+        _count: true,
+        orderBy: { _count: { uf: "desc" } }
+      })
+    ]);
+    return {
+      totalCasas,
+      totalUsuarios,
+      totalProposicoes,
+      totalSessoes,
+      casasPorUF: casasPorUF.map((c) => ({ uf: c.uf, total: c._count }))
+    };
+  });
+}
+
 // src/plugins/swagger.ts
 var import_swagger = __toESM(require("@fastify/swagger"));
 var import_swagger_ui = __toESM(require("@fastify/swagger-ui"));
@@ -3602,6 +3792,7 @@ async function build() {
   await app.register(buscaRoutes, { prefix: `${v1}/busca` });
   await app.register(notificacoesRoutes, { prefix: `${v1}/notificacoes` });
   await app.register(exportacaoRoutes, { prefix: `${v1}/exportar` });
+  await app.register(sistemaRoutes, { prefix: `${v1}/sistema` });
   await app.register(publicacaoRoutes, { prefix: `${v1}/publicacao` });
   app.setErrorHandler((error, req, reply) => {
     const status = error.statusCode ?? 500;
