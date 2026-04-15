@@ -22,6 +22,7 @@ import { buscaRoutes }         from './modules/busca/routes'
 import { notificacoesRoutes }  from './modules/notificacoes/routes'
 import { exportacaoRoutes }    from './modules/exportacao/routes'
 import { sistemaRoutes }       from './modules/sistema/routes'
+import { menusRoutes }          from './modules/menus/routes'
 import { swaggerPlugin }       from './plugins/swagger'
 import { authPlugin }          from './plugins/auth'
 import { auditoriaPlugin }     from './plugins/auditoria'
@@ -103,6 +104,7 @@ export async function build() {
 
   // ── Administração do Sistema (Superadmin) ────────────────────────
   await app.register(sistemaRoutes,      { prefix: `${v1}/sistema` })
+  await app.register(menusRoutes,         { prefix: `${v1}/menus` })
 
   // ── Portal público ────────────────────────────────────────────────
   await app.register(publicacaoRoutes,   { prefix: `${v1}/publicacao` })

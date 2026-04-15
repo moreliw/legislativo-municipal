@@ -3696,6 +3696,147 @@ async function sistemaRoutes(app) {
   });
 }
 
+// src/modules/menus/routes.ts
+var MENU_TREE = [
+  {
+    id: "dashboard",
+    label: "Painel",
+    href: "/dashboard",
+    icon: "home",
+    ordem: 1,
+    permissao: null
+    // sempre visível para logados
+  },
+  {
+    id: "proposicoes",
+    label: "Proposi\xE7\xF5es",
+    href: "/proposicoes",
+    icon: "doc",
+    ordem: 2,
+    permissao: "proposicoes:ler"
+  },
+  {
+    id: "sessoes",
+    label: "Sess\xF5es",
+    href: "/sessoes",
+    icon: "calendar",
+    ordem: 3,
+    permissao: "sessoes:ler"
+  },
+  {
+    id: "documentos",
+    label: "Documentos",
+    href: "/documentos",
+    icon: "folder",
+    ordem: 4,
+    permissao: "documentos:ler"
+  },
+  {
+    id: "processos",
+    label: "Processos",
+    href: "/processos",
+    icon: "proc",
+    ordem: 5,
+    permissao: "processos:ler"
+  },
+  {
+    id: "relatorios",
+    label: "Relat\xF3rios",
+    href: "/relatorios",
+    icon: "chart",
+    ordem: 6,
+    permissao: "relatorios:ler"
+  },
+  {
+    id: "notificacoes",
+    label: "Notifica\xE7\xF5es",
+    href: "/notificacoes",
+    icon: "bell",
+    ordem: 7,
+    permissao: null
+  },
+  // Seção Administração
+  {
+    id: "admin-usuarios",
+    label: "Usu\xE1rios",
+    href: "/admin/usuarios",
+    icon: "users",
+    secao: "admin",
+    ordem: 10,
+    permissao: "usuarios:ler"
+  },
+  {
+    id: "admin-configuracoes",
+    label: "Configura\xE7\xF5es",
+    href: "/admin/configuracoes",
+    icon: "gear",
+    secao: "admin",
+    ordem: 11,
+    permissao: "admin:configuracoes"
+  },
+  {
+    id: "auditoria",
+    label: "Auditoria",
+    href: "/auditoria",
+    icon: "shield",
+    secao: "admin",
+    ordem: 12,
+    permissao: "auditoria:ler"
+  },
+  {
+    id: "portal",
+    label: "Portal P\xFAblico",
+    href: "/portal",
+    icon: "globe",
+    secao: "admin",
+    ordem: 13,
+    permissao: null
+  },
+  // Seção Sistema (apenas superadmin)
+  {
+    id: "sistema",
+    label: "Administra\xE7\xE3o Geral",
+    href: "/sistema",
+    icon: "sistema",
+    secao: "sistema",
+    ordem: 20,
+    permissao: "sistema:*"
+  }
+];
+function checarPermissao2(permissoes, requerida) {
+  if (!requerida) return true;
+  if (permissoes.includes("*:*")) return true;
+  if (permissoes.includes(requerida)) return true;
+  const [modulo, acao] = requerida.split(":");
+  return permissoes.some((p) => {
+    const [pm, pa] = p.split(":");
+    return (pm === "*" || pm === modulo) && (pa === "*" || pa === acao);
+  });
+}
+async function menusRoutes(app) {
+  app.get("/", async (req) => {
+    const user = req.user;
+    if (!user) return { menus: [], secoes: {} };
+    const { permissoes, casaId } = user;
+    const isSuperAdmin = casaId === "sistema" || permissoes.includes("sistema:*");
+    const menusVisiveis = MENU_TREE.filter((m) => {
+      if (m.secao === "sistema") return isSuperAdmin;
+      return checarPermissao2(permissoes, m.permissao);
+    });
+    return {
+      menus: menusVisiveis,
+      isSuperAdmin,
+      usuario: {
+        id: user.id,
+        nome: user.nome,
+        email: user.email,
+        casaId: user.casaId,
+        perfis: user.perfis
+      }
+    };
+  });
+}
+
 // src/plugins/swagger.ts
 var import_swagger = __toESM(require("@fastify/swagger"));
 var import_swagger_ui = __toESM(require("@fastify/swagger-ui"));
@@ -3793,6 +3934,7 @@ async function build() {
   await app.register(notificacoesRoutes, { prefix: `${v1}/notificacoes` });
   await app.register(exportacaoRoutes, { prefix: `${v1}/exportar` });
   await app.register(sistemaRoutes, { prefix: `${v1}/sistema` });
+  await app.register(menusRoutes, { prefix: `${v1}/menus` });
   await app.register(publicacaoRoutes, { prefix: `${v1}/publicacao` });
   app.setErrorHandler((error, req, reply) => {
     const status = error.statusCode ?? 500;
