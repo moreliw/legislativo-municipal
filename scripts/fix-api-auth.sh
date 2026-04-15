@@ -13,6 +13,13 @@ echo ""
 echo -e "${BOLD}  Corrigindo API — Sistema Legislativo${N}"
 echo ""
 
+# ── 0. Atualizar código PRIMEIRO ──────────────────────────────────
+info "Atualizando código do GitHub..."
+cd "$APP_DIR"
+git fetch origin main 2>&1 | tail -1
+git reset --hard origin/main 2>&1 | tail -1
+ok "Código: $(git log --oneline -1 | cut -c1-50)"
+
 # ── 1. Parar API ─────────────────────────────────────────────────
 pm2 delete leg-api 2>/dev/null || true
 

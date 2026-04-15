@@ -77,6 +77,12 @@ export async function build() {
 
   // ── Plugins de negócio ───────────────────────────────────────────
   await app.register(swaggerPlugin)
+  
+  // Declarar decorators uma única vez no escopo raiz
+  // ANTES de qualquer plugin que os utilize
+  if (!app.hasDecorator('user')) app.decorateRequest('user', null)
+  if (!app.hasDecorator('auditoria')) app.decorateRequest('auditoria', null)
+  
   await app.register(authPlugin)       // Intercepta e verifica JWT em todas as rotas privadas
   await app.register(auditoriaPlugin)
   await app.register(lgpdPlugin)
