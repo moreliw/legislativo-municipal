@@ -886,3 +886,24 @@ enum TipoEventoAuth {
   TENTATIVA_INVALIDA
   CONVITE_ACEITO
 }
+
+// ============================================================
+// MENUS DINÂMICOS — RBAC
+// ============================================================
+
+model Menu {
+  id          String    @id @default(cuid())
+  codigo      String    @unique   // identificador único ex: "proposicoes"
+  label       String              // texto exibido
+  href        String              // rota no frontend
+  icon        String              // nome do ícone
+  secao       String?             // null=main, "admin", "sistema"
+  ordem       Int       @default(0)
+  ativo       Boolean   @default(true)
+  permissao   String?             // permissão necessária (null = todos logados)
+  descricao   String?
+  criadoEm   DateTime  @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("menus")
+}

@@ -579,9 +579,9 @@ async function authRoutes(app) {
     if (!req.user) {
       return reply.status(401).send({ error: "Unauthorized" });
     }
-    const { PrismaClient: PrismaClient21 } = await import("@prisma/client");
-    const prisma21 = new PrismaClient21();
-    const sessoes = await prisma21.sessaoAuth.findMany({
+    const { PrismaClient: PrismaClient22 } = await import("@prisma/client");
+    const prisma22 = new PrismaClient22();
+    const sessoes = await prisma22.sessaoAuth.findMany({
       where: {
         credencial: { usuarioId: req.user.id },
         ativo: true,
@@ -597,9 +597,9 @@ async function authRoutes(app) {
       return reply.status(401).send({ error: "Unauthorized" });
     }
     const { id } = req.params;
-    const { PrismaClient: PrismaClient21 } = await import("@prisma/client");
-    const prisma21 = new PrismaClient21();
-    await prisma21.sessaoAuth.updateMany({
+    const { PrismaClient: PrismaClient22 } = await import("@prisma/client");
+    const prisma22 = new PrismaClient22();
+    await prisma22.sessaoAuth.updateMany({
       where: {
         id,
         credencial: { usuarioId: req.user.id }
@@ -3697,112 +3697,8 @@ async function sistemaRoutes(app) {
 }
 
 // src/modules/menus/routes.ts
-var MENU_TREE = [
-  {
-    id: "dashboard",
-    label: "Painel",
-    href: "/dashboard",
-    icon: "home",
-    ordem: 1,
-    permissao: null
-    // sempre visível para logados
-  },
-  {
-    id: "proposicoes",
-    label: "Proposi\xE7\xF5es",
-    href: "/proposicoes",
-    icon: "doc",
-    ordem: 2,
-    permissao: "proposicoes:ler"
-  },
-  {
-    id: "sessoes",
-    label: "Sess\xF5es",
-    href: "/sessoes",
-    icon: "calendar",
-    ordem: 3,
-    permissao: "sessoes:ler"
-  },
-  {
-    id: "documentos",
-    label: "Documentos",
-    href: "/documentos",
-    icon: "folder",
-    ordem: 4,
-    permissao: "documentos:ler"
-  },
-  {
-    id: "processos",
-    label: "Processos",
-    href: "/processos",
-    icon: "proc",
-    ordem: 5,
-    permissao: "processos:ler"
-  },
-  {
-    id: "relatorios",
-    label: "Relat\xF3rios",
-    href: "/relatorios",
-    icon: "chart",
-    ordem: 6,
-    permissao: "relatorios:ler"
-  },
-  {
-    id: "notificacoes",
-    label: "Notifica\xE7\xF5es",
-    href: "/notificacoes",
-    icon: "bell",
-    ordem: 7,
-    permissao: null
-  },
-  // Seção Administração
-  {
-    id: "admin-usuarios",
-    label: "Usu\xE1rios",
-    href: "/admin/usuarios",
-    icon: "users",
-    secao: "admin",
-    ordem: 10,
-    permissao: "usuarios:ler"
-  },
-  {
-    id: "admin-configuracoes",
-    label: "Configura\xE7\xF5es",
-    href: "/admin/configuracoes",
-    icon: "gear",
-    secao: "admin",
-    ordem: 11,
-    permissao: "admin:configuracoes"
-  },
-  {
-    id: "auditoria",
-    label: "Auditoria",
-    href: "/auditoria",
-    icon: "shield",
-    secao: "admin",
-    ordem: 12,
-    permissao: "auditoria:ler"
-  },
-  {
-    id: "portal",
-    label: "Portal P\xFAblico",
-    href: "/portal",
-    icon: "globe",
-    secao: "admin",
-    ordem: 13,
-    permissao: null
-  },
-  // Seção Sistema (apenas superadmin)
-  {
-    id: "sistema",
-    label: "Administra\xE7\xE3o Geral",
-    href: "/sistema",
-    icon: "sistema",
-    secao: "sistema",
-    ordem: 20,
-    permissao: "sistema:*"
-  }
-];
+var import_client21 = require("@prisma/client");
+var prisma21 = new import_client21.PrismaClient();
 function checarPermissao2(permissoes, requerida) {
   if (!requerida) return true;
   if (permissoes.includes("*:*")) return true;
@@ -3814,18 +3710,23 @@ function checarPermissao2(permissoes, requerida) {
   });
 }
 async function menusRoutes(app) {
-  app.get("/", async (req) => {
+  app.get("/", async (req, reply) => {
     const user = req.user;
-    if (!user) return { menus: [], secoes: {} };
+    if (!user) return reply.status(401).send({ error: "Unauthorized" });
     const { permissoes, casaId } = user;
     const isSuperAdmin = casaId === "sistema" || permissoes.includes("sistema:*");
-    const menusVisiveis = MENU_TREE.filter((m) => {
+    const todosMenus = await prisma21.menu.findMany({
+      where: { ativo: true },
+      orderBy: { ordem: "asc" }
+    });
+    const menusVisiveis = todosMenus.filter((m) => {
       if (m.secao === "sistema") return isSuperAdmin;
       return checarPermissao2(permissoes, m.permissao);
     });
     return {
       menus: menusVisiveis,
       isSuperAdmin,
+      total: menusVisiveis.length,
       usuario: {
         id: user.id,
         nome: user.nome,
@@ -3834,6 +3735,14 @@ async function menusRoutes(app) {
         perfis: user.perfis
       }
     };
+  });
+  app.get("/todos", async (req, reply) => {
+    const user = req.user;
+    if (!user || user.casaId !== "sistema" && !user.permissoes.includes("sistema:*")) {
+      return reply.status(403).send({ error: "Forbidden" });
+    }
+    const menus = await prisma21.menu.findMany({ orderBy: { ordem: "asc" } });
+    return { menus, total: menus.length };
   });
 }
 

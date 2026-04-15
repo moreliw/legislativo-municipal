@@ -1,111 +1,7 @@
 import { FastifyInstance, FastifyRequest } from 'fastify'
+import { PrismaClient } from '@prisma/client'
 
-// Definição completa dos menus com permissões necessárias
-const MENU_TREE = [
-  {
-    id: 'dashboard',
-    label: 'Painel',
-    href: '/dashboard',
-    icon: 'home',
-    ordem: 1,
-    permissao: null, // sempre visível para logados
-  },
-  {
-    id: 'proposicoes',
-    label: 'Proposições',
-    href: '/proposicoes',
-    icon: 'doc',
-    ordem: 2,
-    permissao: 'proposicoes:ler',
-  },
-  {
-    id: 'sessoes',
-    label: 'Sessões',
-    href: '/sessoes',
-    icon: 'calendar',
-    ordem: 3,
-    permissao: 'sessoes:ler',
-  },
-  {
-    id: 'documentos',
-    label: 'Documentos',
-    href: '/documentos',
-    icon: 'folder',
-    ordem: 4,
-    permissao: 'documentos:ler',
-  },
-  {
-    id: 'processos',
-    label: 'Processos',
-    href: '/processos',
-    icon: 'proc',
-    ordem: 5,
-    permissao: 'processos:ler',
-  },
-  {
-    id: 'relatorios',
-    label: 'Relatórios',
-    href: '/relatorios',
-    icon: 'chart',
-    ordem: 6,
-    permissao: 'relatorios:ler',
-  },
-  {
-    id: 'notificacoes',
-    label: 'Notificações',
-    href: '/notificacoes',
-    icon: 'bell',
-    ordem: 7,
-    permissao: null,
-  },
-  // Seção Administração
-  {
-    id: 'admin-usuarios',
-    label: 'Usuários',
-    href: '/admin/usuarios',
-    icon: 'users',
-    secao: 'admin',
-    ordem: 10,
-    permissao: 'usuarios:ler',
-  },
-  {
-    id: 'admin-configuracoes',
-    label: 'Configurações',
-    href: '/admin/configuracoes',
-    icon: 'gear',
-    secao: 'admin',
-    ordem: 11,
-    permissao: 'admin:configuracoes',
-  },
-  {
-    id: 'auditoria',
-    label: 'Auditoria',
-    href: '/auditoria',
-    icon: 'shield',
-    secao: 'admin',
-    ordem: 12,
-    permissao: 'auditoria:ler',
-  },
-  {
-    id: 'portal',
-    label: 'Portal Público',
-    href: '/portal',
-    icon: 'globe',
-    secao: 'admin',
-    ordem: 13,
-    permissao: null,
-  },
-  // Seção Sistema (apenas superadmin)
-  {
-    id: 'sistema',
-    label: 'Administração Geral',
-    href: '/sistema',
-    icon: 'sistema',
-    secao: 'sistema',
-    ordem: 20,
-    permissao: 'sistema:*',
-  },
-]
+const prisma = new PrismaClient()
 
 function checarPermissao(permissoes: string[], requerida: string | null): boolean {
   if (!requerida) return true
@@ -119,30 +15,48 @@ function checarPermissao(permissoes: string[], requerida: string | null): boolea
 }
 
 export async function menusRoutes(app: FastifyInstance) {
-  // GET /api/v1/menus — retorna menus filtrados pelas permissões do usuário
-  app.get('/', async (req: FastifyRequest) => {
+  // GET /api/v1/menus — menus filtrados pelas permissões do usuário logado
+  app.get('/', async (req: FastifyRequest, reply) => {
     const user = (req as any).user
-    if (!user) return { menus: [], secoes: {} }
+    if (!user) return reply.status(401).send({ error: 'Unauthorized' })
 
     const { permissoes, casaId } = user
     const isSuperAdmin = casaId === 'sistema' || permissoes.includes('sistema:*')
 
-    const menusVisiveis = MENU_TREE.filter(m => {
-      // Menus do sistema só para superadmin
+    // Buscar menus ativos do banco
+    const todosMenus = await prisma.menu.findMany({
+      where: { ativo: true },
+      orderBy: { ordem: 'asc' },
+    })
+
+    const menusVisiveis = todosMenus.filter(m => {
+      // Menus da seção sistema: APENAS superadmin
       if (m.secao === 'sistema') return isSuperAdmin
+      // Demais menus: verificar permissão
       return checarPermissao(permissoes, m.permissao)
     })
 
     return {
       menus: menusVisiveis,
       isSuperAdmin,
+      total: menusVisiveis.length,
       usuario: {
-        id: user.id,
-        nome: user.nome,
-        email: user.email,
-        casaId: user.casaId,
-        perfis: user.perfis,
+        id:      user.id,
+        nome:    user.nome,
+        email:   user.email,
+        casaId:  user.casaId,
+        perfis:  user.perfis,
       },
     }
+  })
+
+  // GET /api/v1/menus/todos — todos os menus (apenas superadmin, para admin)
+  app.get('/todos', async (req: FastifyRequest, reply) => {
+    const user = (req as any).user
+    if (!user || (user.casaId !== 'sistema' && !user.permissoes.includes('sistema:*'))) {
+      return reply.status(403).send({ error: 'Forbidden' })
+    }
+    const menus = await prisma.menu.findMany({ orderBy: { ordem: 'asc' } })
+    return { menus, total: menus.length }
   })
 }
