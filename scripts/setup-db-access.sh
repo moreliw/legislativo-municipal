@@ -15,6 +15,13 @@ echo ""
 echo -e "${BOLD}  Configurando acesso externo ao PostgreSQL${N}"
 echo ""
 
+# ── 0. Atualizar código do GitHub ────────────────────────────────
+info "Atualizando código..."
+cd /opt/legislativo
+git fetch origin main 2>&1 | tail -1
+git reset --hard origin/main 2>&1 | tail -1
+ok "Código: $(git log --oneline -1 | cut -c1-55)"
+
 # ── 1. Recriar container exposto em 0.0.0.0 ─────────────────────
 info "Reconfigurando container PostgreSQL para acesso externo..."
 docker stop leg_postgres 2>/dev/null || true
@@ -78,13 +85,14 @@ ok "Schema aplicado"
 
 # ── 7. Criar tabela de menus e popular ───────────────────────────
 info "Criando e populando tabela de menus..."
+cd /opt/legislativo/apps/api
 DATABASE_URL="postgresql://legislativo:${DB_PASSWORD}@localhost:${DB_PORT}/legislativo" \
-  npx tsx /opt/legislativo/apps/api/prisma/seed-menus.ts 2>&1 | tail -20
+  npx tsx prisma/seed-menus.ts 2>&1 | tail -20
 
 # ── 8. Criar superadmin ──────────────────────────────────────────
 info "Criando superadmin..."
 DATABASE_URL="postgresql://legislativo:${DB_PASSWORD}@localhost:${DB_PORT}/legislativo" \
-  npx tsx /opt/legislativo/apps/api/prisma/seed-superadmin.ts 2>&1 | tail -10
+  npx tsx prisma/seed-superadmin.ts 2>&1 | tail -10
 
 # ── 9. Resultado ─────────────────────────────────────────────────
 echo ""
