@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getUsuario, apiFetch, logout } from '@/lib/auth'
+import { getUsuario, apiFetch } from '@/lib/auth'
 
 interface Stats {
   totalCasas: number
@@ -81,39 +81,15 @@ export default function SistemaPage() {
   }
 
   const S = {
-    page: { minHeight:'100vh', background:'var(--bg-base)', fontFamily:'var(--font-sans)', color:'var(--text)' },
-    header: { background:'var(--bg-surface)', borderBottom:'1px solid var(--border)', padding:'0 32px', height:56, display:'flex', alignItems:'center', justifyContent:'space-between' },
+    page: { background:'var(--bg-base)', fontFamily:'var(--font-sans)', color:'var(--text)' },
     card: { background:'var(--bg-surface)', border:'1px solid var(--border)', borderRadius:12, padding:24 },
     inp: { width:'100%', background:'var(--bg-base)', border:'1px solid var(--border-md)', borderRadius:8, padding:'10px 14px', fontSize:14, color:'var(--text)', outline:'none', fontFamily:'var(--font-sans)', boxSizing:'border-box' as const },
     lbl: { display:'block', fontSize:11, fontWeight:600, color:'var(--text-3)', textTransform:'uppercase' as const, letterSpacing:'0.08em', marginBottom:6 },
     btn: { padding:'10px 20px', background:'var(--brand)', color:'white', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'var(--font-sans)' },
   }
 
-  const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
-
   return (
     <div style={S.page}>
-      {/* Header */}
-      <header style={S.header}>
-        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <div style={{ width:32, height:32, borderRadius:8, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <div>
-            <div style={{ fontSize:14, fontWeight:700, color:'var(--text)' }}>Administração do Sistema</div>
-            <div style={{ fontSize:11, color:'var(--text-4)' }}>Controle geral de câmaras municipais</div>
-          </div>
-        </div>
-        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          <span style={{ fontSize:12, color:'var(--text-3)' }}>{usuario?.nome}</span>
-          <button onClick={() => logout()} style={{ ...S.btn, background:'transparent', border:'1px solid var(--border)', color:'var(--red)', padding:'7px 14px' }}>
-            Sair
-          </button>
-        </div>
-      </header>
-
       <div style={{ padding:'28px 32px', maxWidth:1200 }}>
         {/* Tabs */}
         <div style={{ display:'flex', gap:4, marginBottom:28, borderBottom:'1px solid var(--border)', paddingBottom:0 }}>

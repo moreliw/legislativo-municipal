@@ -38,11 +38,27 @@ export async function sistemaRoutes(app: FastifyInstance) {
     const casas = await prisma.casaLegislativa.findMany({
       where: { sigla: { not: 'SISTEMA' } },
       include: {
-        _count: { select: { usuarios: true, proposicoes: true, sessoes: true } },
+        _count: { select: { usuarios: true, sessoes: true } },
       },
       orderBy: { criadoEm: 'desc' },
     })
-    return casas
+    const casaIds = casas.map(c => c.id)
+    const proposicoesPorCasa = casaIds.length > 0
+      ? await prisma.proposicao.groupBy({
+        by: ['casaId'],
+        where: { casaId: { in: casaIds } },
+        _count: { _all: true },
+      })
+      : []
+    const mapProposicoes = new Map(proposicoesPorCasa.map(item => [item.casaId, item._count._all]))
+
+    return casas.map(casa => ({
+      ...casa,
+      _count: {
+        ...casa._count,
+        proposicoes: mapProposicoes.get(casa.id) ?? 0,
+      },
+    }))
   })
 
   // GET /api/v1/sistema/casas/:id — detalhe de uma câmara
@@ -51,7 +67,7 @@ export async function sistemaRoutes(app: FastifyInstance) {
     const casa = await prisma.casaLegislativa.findUnique({
       where: { id },
       include: {
-        _count: { select: { usuarios: true, proposicoes: true, sessoes: true } },
+        _count: { select: { usuarios: true, sessoes: true } },
         usuarios: {
           take: 10,
           select: { id: true, nome: true, email: true, cargo: true, ativo: true, criadoEm: true },
@@ -60,7 +76,14 @@ export async function sistemaRoutes(app: FastifyInstance) {
       },
     })
     if (!casa) return reply.status(404).send({ error: 'Câmara não encontrada' })
-    return casa
+    const totalProposicoes = await prisma.proposicao.count({ where: { casaId: id } })
+    return {
+      ...casa,
+      _count: {
+        ...casa._count,
+        proposicoes: totalProposicoes,
+      },
+    }
   })
 
   // POST /api/v1/sistema/casas — criar nova câmara com estrutura completa
