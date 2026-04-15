@@ -1015,8 +1015,7 @@ var listProposicaoSchema = import_zod2.z.object({
 });
 async function proposicoesRoutes(app) {
   app.get("/", {
-    preHandler: [requireAuth],
-    schema: { querystring: listProposicaoSchema }
+    preHandler: [requireAuth]
   }, async (req, reply) => {
     const query = listProposicaoSchema.parse(req.query);
     const where = {

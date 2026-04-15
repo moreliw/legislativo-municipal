@@ -39,7 +39,6 @@ export async function proposicoesRoutes(app: FastifyInstance) {
   // ── LISTAR ──────────────────────────────────────────────────────
   app.get('/', {
     preHandler: [requireAuth],
-    schema: { querystring: listProposicaoSchema },
   }, async (req: FastifyRequest, reply: FastifyReply) => {
     const query = listProposicaoSchema.parse(req.query)
 
