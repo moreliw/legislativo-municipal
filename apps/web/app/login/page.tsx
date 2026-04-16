@@ -105,24 +105,11 @@ function LoginForm() {
           </div>
 
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#e2e8f4', lineHeight: 1.3, marginBottom: 12 }}>
-            Sistema Legislativo<br />Municipal
+            PLENO
           </h1>
           <p style={{ fontSize: 14, color: '#4a556e', lineHeight: 1.7, marginBottom: 40 }}>
-            Plataforma integrada de gestão de proposições,
-            sessões e tramitação legislativa.
+            Plataforma Legislativa Nacional Online
           </p>
-
-          {/* Features */}
-          {[
-            { icon: '⚡', text: 'Tramitação automatizada com BPM' },
-            { icon: '🔒', text: 'Conformidade LGPD e auditoria total' },
-            { icon: '🏛️', text: 'Multi-tenant por câmara municipal' },
-          ].map(({ icon, text }) => (
-            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-              <span style={{ fontSize: 14 }}>{icon}</span>
-              <span style={{ fontSize: 13, color: '#4a556e' }}>{text}</span>
-            </div>
-          ))}
         </div>
 
         {/* Bottom */}
@@ -261,22 +248,6 @@ function LoginForm() {
               </button>
             </div>
           </form>
-
-          {/* Security note */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '10px 12px',
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-          }}>
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style={{ color: 'var(--green)', flexShrink: 0 }}>
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-              Conexão segura · Sessão criptografada com JWT
-            </span>
-          </div>
         </div>
       </div>
     </div>
