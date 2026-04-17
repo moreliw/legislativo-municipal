@@ -75,6 +75,8 @@ __export(server_exports, {
   build: () => build
 });
 module.exports = __toCommonJS(server_exports);
+var fs = __toESM(require("fs"));
+var path2 = __toESM(require("path"));
 var import_fastify = __toESM(require("fastify"));
 var import_cors = __toESM(require("@fastify/cors"));
 var import_jwt = __toESM(require("@fastify/jwt"));
@@ -2609,11 +2611,11 @@ async function gerarRelatorioProposicoes(params) {
   return bufferFromDoc(docDefinition);
 }
 function bufferFromDoc(docDef) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     const pdfDoc = printer.createPdfKitDocument(docDef);
     const chunks = [];
     pdfDoc.on("data", (chunk) => chunks.push(chunk));
-    pdfDoc.on("end", () => resolve(Buffer.concat(chunks)));
+    pdfDoc.on("end", () => resolve2(Buffer.concat(chunks)));
     pdfDoc.on("error", reject);
     pdfDoc.end();
   });
@@ -3794,6 +3796,18 @@ async function lgpdPlugin(app) {
 }
 
 // src/server.ts
+if (!process.env.JWT_SECRET || !process.env.DATABASE_URL) {
+  const envPath = path2.resolve(__dirname, "../.env");
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, "utf8");
+    for (const line of envContent.split("\n")) {
+      const match = line.match(/^([A-Z_]+)=(.*)$/);
+      if (match && !process.env[match[1]]) {
+        process.env[match[1]] = match[2];
+      }
+    }
+  }
+}
 var JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error("JWT_SECRET deve ter pelo menos 32 caracteres");

@@ -205,6 +205,22 @@ if [[ "$HTTP_SUPER" == "200" ]]; then
   fi
 fi
 
+# Test 8: JWT_SECRET consistency entre workers
+info "Verificando consistência do JWT entre workers..."
+for i in 1 2 3 4 5; do
+  HTTP=$(curl -s -o /tmp/t.json -w "%{http_code}" \
+    -H "Authorization: Bearer $TOKEN" \
+    http://localhost:3001/api/v1/auth/me)
+  if [[ "$HTTP" != "200" ]]; then
+    warn "   Tentativa $i: HTTP $HTTP — token rejeitado!"
+    echo "   Resposta: $(cat /tmp/t.json | head -c 150)"
+    break
+  fi
+done
+if [[ "$HTTP" == "200" ]]; then
+  ok "8. Token aceito em 5 requests consecutivos (JWT consistente)"
+fi
+
 echo ""
 echo -e "${BOLD}═════════════════════════════════════════════════════${N}"
 echo -e "${BOLD}           STATUS FINAL${N}"
