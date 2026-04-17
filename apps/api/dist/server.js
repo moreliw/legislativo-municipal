@@ -904,6 +904,7 @@ var TramitacaoService = class {
 };
 
 // src/plugins/auth.ts
+var import_fastify_plugin = __toESM(require("fastify-plugin"));
 var import_client4 = require("@prisma/client");
 var prisma4 = new import_client4.PrismaClient();
 var ROTAS_PUBLICAS = [
@@ -918,7 +919,7 @@ var ROTAS_PUBLICAS = [
   "/api/v1/publicacao/portal",
   "/api/v1/publicacao/portal/"
 ];
-async function authPlugin(app) {
+async function authPluginImpl(app) {
   app.addHook("onRequest", async (req, reply) => {
     const url = req.url.split("?")[0];
     if (ROTAS_PUBLICAS.some((p) => url === p || url.startsWith(p))) return;
@@ -969,28 +970,32 @@ async function authPlugin(app) {
     };
   });
 }
+var authPlugin = (0, import_fastify_plugin.default)(authPluginImpl, { name: "auth-plugin" });
 function requireAuth(req, reply, done) {
-  if (!req.user) return reply.status(401).send({ error: "Unauthorized" });
+  if (!req.user) return reply.status(401).send({ error: "Unauthorized", message: "Autentica\xE7\xE3o necess\xE1ria" });
   done();
-}
-function requirePermission(...requeridas) {
-  return (req, reply, done) => {
-    if (!req.user) return reply.status(401).send({ error: "Unauthorized" });
-    const tem = requeridas.every((r) => checarPermissao(req.user.permissoes, r));
-    if (!tem) return reply.status(403).send({
-      error: "Forbidden",
-      message: `Permiss\xE3o insuficiente: ${requeridas.join(", ")}`
-    });
-    done();
-  };
 }
 function checarPermissao(permissoes, requerida) {
   if (permissoes.includes("*:*")) return true;
+  if (permissoes.includes(requerida)) return true;
   const [modulo, acao] = requerida.split(":");
   return permissoes.some((p) => {
     const [pm, pa] = p.split(":");
     return (pm === "*" || pm === modulo) && (pa === "*" || pa === acao);
   });
+}
+function requirePermission(...requeridas) {
+  return (req, reply, done) => {
+    if (!req.user) return reply.status(401).send({ error: "Unauthorized" });
+    const tem = requeridas.every((r) => checarPermissao(req.user.permissoes, r));
+    if (!tem) {
+      return reply.status(403).send({
+        error: "Forbidden",
+        message: `Permiss\xE3o insuficiente: ${requeridas.join(", ")}`
+      });
+    }
+    done();
+  };
 }
 
 // src/modules/proposicoes/routes.ts
@@ -1598,9 +1603,10 @@ var NotificacaoService = class {
 };
 
 // src/plugins/auditoria.ts
+var import_fastify_plugin2 = __toESM(require("fastify-plugin"));
 var import_client8 = require("@prisma/client");
 var prisma8 = new import_client8.PrismaClient();
-async function auditoriaPlugin(app) {
+async function auditoriaPluginImpl(app) {
   if (!app.hasDecorator("auditoria")) {
     app.decorateRequest("auditoria", null);
   }
@@ -1626,38 +1632,26 @@ async function auditoriaPlugin(app) {
     };
   });
 }
-var AuditoriaService = class {
-  prisma;
-  constructor() {
-    this.prisma = new import_client8.PrismaClient();
-  }
-  async registrar(data) {
+var auditoriaPlugin = (0, import_fastify_plugin2.default)(auditoriaPluginImpl, { name: "auditoria-plugin" });
+var auditoriaService = {
+  async registrar(params) {
     try {
-      await this.prisma.auditoriaLog.create({ data });
-    } catch {
+      await prisma8.auditoriaLog.create({
+        data: {
+          entidade: params.entidade,
+          entidadeId: params.entidadeId,
+          acao: params.acao,
+          usuarioId: params.usuarioId ?? null,
+          ip: params.ip ?? "",
+          endpoint: params.endpoint ?? "",
+          dadosAntes: params.dadosAntes ?? void 0,
+          dadosDepois: params.dadosDepois ?? void 0
+        }
+      });
+    } catch (err) {
     }
   }
-  async listar(filtros) {
-    const { entidade, entidadeId, usuarioId, de, ate, page = 1, pageSize = 50 } = filtros;
-    const where = {};
-    if (entidade) where.entidade = entidade;
-    if (entidadeId) where.entidadeId = entidadeId;
-    if (usuarioId) where.usuarioId = usuarioId;
-    if (de || ate) where.criadoEm = { ...de ? { gte: de } : {}, ...ate ? { lte: ate } : {} };
-    const [total, data] = await Promise.all([
-      this.prisma.auditoriaLog.count({ where }),
-      this.prisma.auditoriaLog.findMany({
-        where,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        orderBy: { criadoEm: "desc" },
-        include: { usuario: { select: { nome: true, email: true } } }
-      })
-    ]);
-    return { data, meta: { total, page, pageSize, totalPages: Math.ceil(total / pageSize) } };
-  }
 };
-var auditoriaService = new AuditoriaService();
 
 // src/modules/tramitacao/routes.ts
 var prisma9 = new import_client9.PrismaClient();
@@ -3758,8 +3752,9 @@ async function menusRoutes(app) {
 
 // src/plugins/swagger.ts
 var import_swagger = __toESM(require("@fastify/swagger"));
+var import_fastify_plugin3 = __toESM(require("fastify-plugin"));
 var import_swagger_ui = __toESM(require("@fastify/swagger-ui"));
-async function swaggerPlugin(app) {
+async function swaggerPluginImpl(app) {
   await app.register(import_swagger.default, {
     openapi: {
       info: {
@@ -3785,15 +3780,18 @@ async function swaggerPlugin(app) {
   });
   app.log.info("Swagger UI dispon\xEDvel em /docs");
 }
+var swaggerPlugin = (0, import_fastify_plugin3.default)(swaggerPluginImpl, { name: "swaggerPlugin" });
 
 // src/plugins/lgpd.ts
-async function lgpdPlugin(app) {
+var import_fastify_plugin4 = __toESM(require("fastify-plugin"));
+async function lgpdPluginImpl(app) {
   app.addHook("onSend", async (req, reply, payload) => {
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("X-Privacy-Policy", "https://legislativo.gov.br/privacidade");
     return payload;
   });
 }
+var lgpdPlugin = (0, import_fastify_plugin4.default)(lgpdPluginImpl, { name: "lgpdPlugin" });
 
 // src/server.ts
 if (!process.env.JWT_SECRET || !process.env.DATABASE_URL) {

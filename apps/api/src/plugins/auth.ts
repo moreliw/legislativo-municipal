@@ -1,9 +1,9 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import fp from 'fastify-plugin'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-// Rotas públicas — sem autenticação
 const ROTAS_PUBLICAS = [
   '/health',
   '/docs',
@@ -32,20 +32,17 @@ declare module 'fastify' {
   }
 }
 
-export async function authPlugin(app: FastifyInstance) {
+async function authPluginImpl(app: FastifyInstance) {
   app.addHook('onRequest', async (req: FastifyRequest, reply: FastifyReply) => {
     const url = req.url.split('?')[0]
 
-    // Liberar rotas públicas
     if (ROTAS_PUBLICAS.some(p => url === p || url.startsWith(p))) return
 
-    // Verificar Bearer token
     const header = req.headers.authorization
     if (!header?.startsWith('Bearer ')) {
       return reply.status(401).send({ error: 'Unauthorized', message: 'Token não fornecido' })
     }
 
-    // Verificar JWT
     let payload: Record<string, unknown>
     try {
       payload = await req.jwtVerify() as Record<string, unknown>
@@ -53,10 +50,9 @@ export async function authPlugin(app: FastifyInstance) {
       const code = err?.code || 'UNKNOWN'
       const msg  = err?.code === 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED'
         ? 'Token expirado' : 'Token inválido'
-      // Log detalhado para debug (sem vazar dados sensíveis)
       req.log.warn({ code, url, err: err?.message }, 'JWT verify failed')
-      return reply.status(401).send({ 
-        error: 'Unauthorized', 
+      return reply.status(401).send({
+        error: 'Unauthorized',
         message: msg,
         code,
       })
@@ -64,7 +60,6 @@ export async function authPlugin(app: FastifyInstance) {
 
     const userId = payload.sub as string
 
-    // Buscar usuário no banco
     const usuario = await prisma.usuario.findUnique({
       where: { id: userId },
       include: {
@@ -98,38 +93,36 @@ export async function authPlugin(app: FastifyInstance) {
   })
 }
 
+// USAR fastify-plugin para que o hook seja GLOBAL (escopo raiz)
+// Sem fp, o hook fica encapsulado e não afeta rotas fora do plugin
+export const authPlugin = fp(authPluginImpl, { name: 'auth-plugin' })
 
-export function requireAuth(req: FastifyRequest, reply: FastifyReply, done: () => void) {
-  if (!req.user) return reply.status(401).send({ error: 'Unauthorized' })
-  done()
-}
-
-export function requirePermission(...requeridas: string[]) {
-  return (req: FastifyRequest, reply: FastifyReply, done: () => void) => {
-    if (!req.user) return reply.status(401).send({ error: 'Unauthorized' })
-    const tem = requeridas.every(r => checarPermissao(req.user.permissoes, r))
-    if (!tem) return reply.status(403).send({
-      error: 'Forbidden',
-      message: `Permissão insuficiente: ${requeridas.join(', ')}`,
-    })
-    done()
-  }
-}
-
-export function requireAdmin(req: FastifyRequest, reply: FastifyReply, done: () => void) {
-  if (!req.user) return reply.status(401).send({ error: 'Unauthorized' })
-  if (!req.user.perfis.includes('ADMINISTRADOR') &&
-      !checarPermissao(req.user.permissoes, '*:*')) {
-    return reply.status(403).send({ error: 'Forbidden', message: 'Apenas administradores' })
-  }
+// Helpers de autorização (preHandler)
+export function requireAuth(req: FastifyRequest, reply: FastifyReply, done: (err?: Error) => void) {
+  if (!req.user) return reply.status(401).send({ error: 'Unauthorized', message: 'Autenticação necessária' })
   done()
 }
 
 function checarPermissao(permissoes: string[], requerida: string): boolean {
   if (permissoes.includes('*:*')) return true
+  if (permissoes.includes(requerida)) return true
   const [modulo, acao] = requerida.split(':')
   return permissoes.some(p => {
     const [pm, pa] = p.split(':')
     return (pm === '*' || pm === modulo) && (pa === '*' || pa === acao)
   })
+}
+
+export function requirePermission(...requeridas: string[]) {
+  return (req: FastifyRequest, reply: FastifyReply, done: (err?: Error) => void) => {
+    if (!req.user) return reply.status(401).send({ error: 'Unauthorized' })
+    const tem = requeridas.every(r => checarPermissao(req.user.permissoes, r))
+    if (!tem) {
+      return reply.status(403).send({
+        error: 'Forbidden',
+        message: `Permissão insuficiente: ${requeridas.join(', ')}`,
+      })
+    }
+    done()
+  }
 }

@@ -1,8 +1,9 @@
 import swagger from '@fastify/swagger'
+import fp from 'fastify-plugin'
 import swaggerUi from '@fastify/swagger-ui'
 import { FastifyInstance } from 'fastify'
 
-export async function swaggerPlugin(app: FastifyInstance) {
+async function swaggerPluginImpl(app: FastifyInstance) {
   await app.register(swagger, {
     openapi: {
       info: {
@@ -30,3 +31,6 @@ export async function swaggerPlugin(app: FastifyInstance) {
 
   app.log.info('Swagger UI disponível em /docs')
 }
+
+
+export const swaggerPlugin = fp(swaggerPluginImpl, { name: 'swaggerPlugin' })
