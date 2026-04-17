@@ -94,6 +94,16 @@ info "Criando superadmin..."
 DATABASE_URL="postgresql://legislativo:${DB_PASSWORD}@localhost:${DB_PORT}/legislativo" \
   npx tsx prisma/seed-superadmin.ts 2>&1 | tail -10
 
+# ── 8b. Seed completo Rio Novo do Sul (câmara, usuários, perfis, órgãos) ─
+info "Populando câmara Rio Novo do Sul..."
+DATABASE_URL="postgresql://legislativo:${DB_PASSWORD}@localhost:${DB_PORT}/legislativo" \
+  npx tsx prisma/seed.ts 2>&1 | tail -15
+
+# ── 8c. Criar proposições reais ───────────────────────────────────
+info "Criando proposições de exemplo..."
+DATABASE_URL="postgresql://legislativo:${DB_PASSWORD}@localhost:${DB_PORT}/legislativo" \
+  npx tsx prisma/seed-proposicoes.ts 2>&1 | tail -5
+
 # ── 9. Resultado ─────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}╔═══════════════════════════════════════════════════════╗${N}"

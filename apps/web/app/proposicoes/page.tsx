@@ -1,38 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Search, Filter, Plus, ArrowUpDown, FileText, ChevronLeft, ChevronRight } from 'lucide-react'
+import { listarProposicoes, formatarData, type Proposicao, type ListaProposicoesFiltros } from '@/lib/api'
 
-const statusConfig: Record<string, { label: string; dot: string; text: string }> = {
-  RASCUNHO: { label: 'Rascunho', dot: '#5c6282', text: 'text-[#5c6282]' },
-  EM_ELABORACAO: { label: 'Em elaboração', dot: '#9198b0', text: 'text-[#9198b0]' },
-  PROTOCOLADO: { label: 'Protocolado', dot: '#2d7dd2', text: 'text-[#2d7dd2]' },
-  EM_ANALISE: { label: 'Em análise', dot: '#9178e0', text: 'text-[#9178e0]' },
-  EM_COMISSAO: { label: 'Em comissão', dot: '#7c5cbf', text: 'text-[#b09de0]' },
-  AGUARDANDO_PARECER_JURIDICO: { label: 'Ag. Jurídico', dot: '#e8a020', text: 'text-[#e8a020]' },
-  EM_PAUTA: { label: 'Em pauta', dot: '#e8a020', text: 'text-[#e8a020]' },
-  EM_VOTACAO: { label: 'Em votação', dot: '#f5a623', text: 'text-[#f5a623]' },
-  APROVADO: { label: 'Aprovado', dot: '#1fa870', text: 'text-[#1fa870]' },
-  REJEITADO: { label: 'Rejeitado', dot: '#d94040', text: 'text-[#d94040]' },
-  DEVOLVIDO: { label: 'Devolvido', dot: '#d94040', text: 'text-[#d94040]' },
-  PUBLICADO: { label: 'Publicado', dot: '#1fa870', text: 'text-[#1fa870]' },
-  ARQUIVADO: { label: 'Arquivado', dot: '#5c6282', text: 'text-[#5c6282]' },
-  SUSPENSO: { label: 'Suspenso', dot: '#d94040', text: 'text-[#e07070]' },
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  RASCUNHO:      { label: 'Rascunho',      color: 'var(--text-3)', bg: 'var(--bg-raised)' },
+  EM_ELABORACAO: { label: 'Em elaboração', color: 'var(--text-2)', bg: 'var(--bg-raised)' },
+  PROTOCOLADO:   { label: 'Protocolado',   color: 'var(--brand)',  bg: 'var(--brand-dim)' },
+  EM_ANALISE:    { label: 'Em análise',    color: 'var(--purple)', bg: 'var(--purple-dim)' },
+  EM_COMISSAO:   { label: 'Em comissão',   color: 'var(--purple)', bg: 'var(--purple-dim)' },
+  AGUARDANDO_PARECER_JURIDICO: { label: 'Ag. Jurídico', color: 'var(--amber)', bg: 'var(--amber-dim)' },
+  EM_PAUTA:      { label: 'Em pauta',      color: 'var(--amber)',  bg: 'var(--amber-dim)' },
+  EM_VOTACAO:    { label: 'Em votação',    color: 'var(--amber)',  bg: 'var(--amber-dim)' },
+  APROVADO:      { label: 'Aprovado',      color: 'var(--green)',  bg: 'var(--green-dim)' },
+  REJEITADO:     { label: 'Rejeitado',     color: 'var(--red)',    bg: 'var(--red-dim)' },
+  DEVOLVIDO:     { label: 'Devolvido',     color: 'var(--red)',    bg: 'var(--red-dim)' },
+  PUBLICADO:     { label: 'Publicado',     color: 'var(--green)',  bg: 'var(--green-dim)' },
+  ARQUIVADO:     { label: 'Arquivado',     color: 'var(--text-3)', bg: 'var(--bg-raised)' },
+  SUSPENSO:      { label: 'Suspenso',      color: 'var(--red)',    bg: 'var(--red-dim)' },
+  RETIRADO:      { label: 'Retirado',      color: 'var(--text-3)', bg: 'var(--bg-raised)' },
 }
 
-const proposicoesMock = [
-  { id: 'p1', numero: 'PL-024/2024', tipo: 'PL', ementa: 'Programa Municipal de Incentivo à Energia Solar Fotovoltaica e dá outras providências', autor: 'Ver. Marcos Oliveira', status: 'EM_COMISSAO', regime: 'ORDINARIO', protocolado: '10/03/2024', atualizado: '18/04/2024', orgaoAtual: 'CMA' },
-  { id: 'p2', numero: 'REQ-031/2024', tipo: 'REQ', ementa: 'Requerimento de informações sobre o Contrato 12/2023 da Prefeitura Municipal', autor: 'Ver. Sandra Costa', status: 'PROTOCOLADO', regime: 'ORDINARIO', protocolado: '22/04/2024', atualizado: '22/04/2024', orgaoAtual: 'PRO' },
-  { id: 'p3', numero: 'MOC-008/2024', tipo: 'MOC', ementa: 'Moção de apoio ao Projeto de Lei Estadual de Regularização Fundiária do município', autor: 'Ver. João Ferreira', status: 'EM_PAUTA', regime: 'ORDINARIO', protocolado: '05/04/2024', atualizado: '24/04/2024', orgaoAtual: 'SEC' },
-  { id: 'p4', numero: 'PL-019/2024', tipo: 'PL', ementa: 'Dispõe sobre o programa de combate ao desperdício de alimentos nos estabelecimentos municipais', autor: 'Ver. Ana Lima', status: 'APROVADO', regime: 'ORDINARIO', protocolado: '15/02/2024', atualizado: '15/04/2024', orgaoAtual: 'PUB' },
-  { id: 'p5', numero: 'PDL-003/2024', tipo: 'PDL', ementa: 'Concede título de Cidadão Honorário ao Sr. Carlos Roberto Menezes pela contribuição cultural', autor: 'Mesa Diretora', status: 'AGUARDANDO_PARECER_JURIDICO', regime: 'ORDINARIO', protocolado: '01/04/2024', atualizado: '10/04/2024', orgaoAtual: 'PJU' },
-  { id: 'p6', numero: 'PL-017/2024', tipo: 'PL', ementa: 'Institui o Programa Municipal de Saúde Mental para servidores e dependentes', autor: 'Ver. Roberto Alves', status: 'EM_COMISSAO', regime: 'URGENTE', protocolado: '20/03/2024', atualizado: '12/04/2024', orgaoAtual: 'CMA' },
-  { id: 'p7', numero: 'IND-014/2024', tipo: 'IND', ementa: 'Indica ao executivo municipal a revitalização da praça central do bairro Jardim São Paulo', autor: 'Ver. Patricia Alves', status: 'EM_ANALISE', regime: 'ORDINARIO', protocolado: '18/03/2024', atualizado: '08/04/2024', orgaoAtual: 'SEC' },
-  { id: 'p8', numero: 'PL-012/2024', tipo: 'PL', ementa: 'Dispõe sobre a criação do conselho municipal de cultura e patrimônio histórico', autor: 'Ver. Luis Martins', status: 'REJEITADO', regime: 'ORDINARIO', protocolado: '01/02/2024', atualizado: '28/03/2024', orgaoAtual: null },
-]
-
-const statusFiltros = [
+const FILTROS_STATUS = [
   { label: 'Todos', value: '' },
   { label: 'Em tramitação', value: 'EM_ANALISE' },
   { label: 'Em comissão', value: 'EM_COMISSAO' },
@@ -41,148 +31,211 @@ const statusFiltros = [
   { label: 'Arquivados', value: 'ARQUIVADO' },
 ]
 
-const tiposFiltros = [
-  { label: 'Todos os tipos', value: '' },
-  { label: 'PL', value: 'PL' },
-  { label: 'PDL', value: 'PDL' },
-  { label: 'MOC', value: 'MOC' },
-  { label: 'REQ', value: 'REQ' },
-  { label: 'IND', value: 'IND' },
-]
-
 export default function ProposicoesPage() {
-  const [busca, setBusca] = useState('')
-  const [statusFiltro, setStatusFiltro] = useState('')
-  const [tipoFiltro, setTipoFiltro] = useState('')
-  const [page, setPage] = useState(1)
+  const [proposicoes, setProposicoes] = useState<Proposicao[]>([])
+  const [total, setTotal]             = useState(0)
+  const [loading, setLoading]         = useState(true)
+  const [erro, setErro]               = useState('')
 
-  const filtradas = proposicoesMock.filter(p => {
-    const matchBusca = !busca || p.numero.toLowerCase().includes(busca.toLowerCase()) ||
-      p.ementa.toLowerCase().includes(busca.toLowerCase()) ||
-      p.autor.toLowerCase().includes(busca.toLowerCase())
-    const matchStatus = !statusFiltro || p.status === statusFiltro
-    const matchTipo = !tipoFiltro || p.tipo === tipoFiltro
-    return matchBusca && matchStatus && matchTipo
-  })
+  const [busca, setBusca]             = useState('')
+  const [statusFiltro, setStatusFiltro] = useState('')
+  const [page, setPage]               = useState(1)
+  const pageSize = 20
+
+  // Debounce na busca
+  const [buscaDebounced, setBuscaDebounced] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => setBuscaDebounced(busca), 400)
+    return () => clearTimeout(t)
+  }, [busca])
+
+  const carregar = useCallback(async () => {
+    setLoading(true); setErro('')
+    try {
+      const filtros: ListaProposicoesFiltros = {
+        page,
+        pageSize,
+        orderBy: 'atualizadoEm',
+        order: 'desc',
+      }
+      if (statusFiltro) filtros.status = statusFiltro
+      if (buscaDebounced) filtros.busca = buscaDebounced
+
+      const res = await listarProposicoes(filtros)
+      setProposicoes(res.data || [])
+      setTotal(res.meta?.total || 0)
+    } catch (err: any) {
+      setErro(err.message || 'Erro ao carregar proposições')
+    } finally {
+      setLoading(false)
+    }
+  }, [page, statusFiltro, buscaDebounced])
+
+  useEffect(() => { carregar() }, [carregar])
+
+  const totalPaginas = Math.max(1, Math.ceil(total / pageSize))
 
   return (
-    <div className="p-6 space-y-5 max-w-7xl mx-auto">
+    <div className="page" style={{ padding: '32px 36px' }}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 className="text-xl font-semibold text-[#e8eaf0]">Proposições</h1>
-          <p className="text-[13px] text-[#5c6282] mt-0.5">{filtradas.length} proposição{filtradas.length !== 1 ? 'ões' : ''} encontrada{filtradas.length !== 1 ? 's' : ''}</p>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+            Proposições
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 4 }}>
+            {loading ? 'Carregando...' : `${total} proposição${total !== 1 ? 'ões' : ''} encontrada${total !== 1 ? 's' : ''}`}
+          </p>
         </div>
-        <Link
-          href="/proposicoes/nova"
-          className="flex items-center gap-2 bg-[#2d7dd2] hover:bg-[#1e6fbf] text-white text-[13px] font-medium px-4 py-2 rounded-md transition-colors"
-        >
-          <Plus size={14} />
+        <Link href="/proposicoes/nova" className="btn btn-primary">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
           Nova Proposição
         </Link>
       </div>
 
       {/* Filtros */}
-      <div className="bg-[#13161f] border border-[#1e2333] rounded-lg p-4 space-y-3">
+      <div style={{ marginBottom: 20 }}>
         {/* Busca */}
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5c6282]" />
+        <div style={{ position: 'relative', marginBottom: 14 }}>
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24"
+            style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }}>
+            <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+            <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
           <input
+            className="input"
             type="text"
-            placeholder="Buscar por número, ementa, autor..."
             value={busca}
-            onChange={e => setBusca(e.target.value)}
-            className="w-full bg-[#0f1117] border border-[#1e2333] rounded-md pl-9 pr-4 py-2 text-[13px] text-[#e8eaf0] placeholder:text-[#5c6282] focus:outline-none focus:border-[#2d7dd2] transition-colors"
+            onChange={e => { setBusca(e.target.value); setPage(1) }}
+            placeholder="Buscar por número, ementa, autor..."
+            style={{ paddingLeft: 40, fontSize: 14 }}
           />
         </div>
 
-        {/* Chips de status */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter size={13} className="text-[#5c6282] flex-shrink-0" />
-          <div className="flex gap-1.5 flex-wrap">
-            {statusFiltros.map(f => (
-              <button
-                key={f.value}
-                onClick={() => setStatusFiltro(f.value)}
-                className={`text-[12px] px-3 py-1 rounded-full border transition-colors ${
-                  statusFiltro === f.value
-                    ? 'bg-[#162d4a] border-[#2d7dd2] text-[#2d7dd2]'
-                    : 'bg-transparent border-[#1e2333] text-[#9198b0] hover:border-[#2a3048]'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-          <div className="ml-2 flex gap-1.5">
-            {tiposFiltros.map(f => (
-              <button
-                key={f.value}
-                onClick={() => setTipoFiltro(f.value)}
-                className={`text-[11px] font-mono px-2.5 py-1 rounded border transition-colors ${
-                  tipoFiltro === f.value
-                    ? 'bg-[#1a1030] border-[#7c5cbf] text-[#b09de0]'
-                    : 'bg-transparent border-[#1e2333] text-[#5c6282] hover:border-[#2a3048]'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+        {/* Filtros por status */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {FILTROS_STATUS.map(f => (
+            <button
+              key={f.value || 'all'}
+              onClick={() => { setStatusFiltro(f.value); setPage(1) }}
+              style={{
+                padding: '7px 14px',
+                fontSize: 13,
+                fontWeight: 500,
+                borderRadius: 7,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-sans)',
+                background: statusFiltro === f.value ? 'var(--brand-dim)' : 'var(--bg-surface)',
+                color:      statusFiltro === f.value ? 'var(--brand)'    : 'var(--text-2)',
+                border: `1px solid ${statusFiltro === f.value ? 'rgba(59,130,246,0.3)' : 'var(--border)'}`,
+                transition: 'all 0.12s',
+              }}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Tabela */}
-      <div className="bg-[#13161f] border border-[#1e2333] rounded-lg overflow-hidden">
-        <table className="w-full text-[13px]">
+      <div className="card" style={{ overflow: 'hidden' }}>
+        {erro && (
+          <div style={{ padding: 16, color: 'var(--red)', fontSize: 14, borderBottom: '1px solid var(--border)' }}>
+            ⚠️ {erro}
+          </div>
+        )}
+
+        <table className="table">
           <thead>
-            <tr className="border-b border-[#1e2333] bg-[#0f1117]">
-              <th className="text-left px-5 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-36">
-                <button className="flex items-center gap-1 hover:text-[#9198b0]">Número <ArrowUpDown size={11} /></button>
-              </th>
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider">Ementa</th>
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-48">Autor</th>
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-40">Status</th>
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#5c6282] uppercase tracking-wider w-32">Atualizado</th>
-              <th className="w-10"></th>
+            <tr>
+              <th style={{ width: 130 }}>Número</th>
+              <th>Ementa</th>
+              <th style={{ width: 180 }}>Autor</th>
+              <th style={{ width: 160 }}>Status</th>
+              <th style={{ width: 110 }}>Atualizado</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#1e2333]">
-            {filtradas.map(p => {
-              const s = statusConfig[p.status] ?? { label: p.status, dot: '#5c6282', text: 'text-[#5c6282]' }
+          <tbody>
+            {loading && (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={`skeleton-${i}`}>
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <td key={j}><div className="skeleton" style={{ height: 14, width: '80%' }}/></td>
+                  ))}
+                </tr>
+              ))
+            )}
+
+            {!loading && proposicoes.length === 0 && (
+              <tr>
+                <td colSpan={5} style={{ padding: 64, textAlign: 'center' }}>
+                  <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.4 }}>📋</div>
+                  <div style={{ fontSize: 15, color: 'var(--text-2)', marginBottom: 4 }}>
+                    Nenhuma proposição encontrada
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                    {busca || statusFiltro
+                      ? 'Tente ajustar os filtros de busca'
+                      : 'Comece criando sua primeira proposição'}
+                  </div>
+                </td>
+              </tr>
+            )}
+
+            {!loading && proposicoes.map(p => {
+              const st = STATUS_CONFIG[p.status] || { label: p.status, color: 'var(--text-3)', bg: 'var(--bg-raised)' }
               return (
-                <tr key={p.id} className="hover:bg-[#1c202e] transition-colors group">
-                  <td className="px-5 py-3.5">
-                    <Link href={`/proposicoes/${p.id}`} className="block">
-                      <span className="font-mono text-[#2d7dd2] font-medium text-[12px]">{p.numero}</span>
+                <tr key={p.id} style={{ cursor: 'pointer' }}
+                    onClick={() => window.location.href = `/proposicoes/${p.id}`}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: 'var(--brand)'
+                      }}>
+                        {p.numero}
+                      </span>
                       {p.regime === 'URGENTE' && (
-                        <span className="ml-1.5 text-[9px] font-bold bg-[#2e1f06] text-[#e8a020] px-1.5 py-0.5 rounded">URG</span>
+                        <span className="badge badge-red" style={{ fontSize: 10, padding: '2px 6px' }}>URG</span>
                       )}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <Link href={`/proposicoes/${p.id}`} className="block text-[#9198b0] line-clamp-2 leading-snug hover:text-[#e8eaf0] transition-colors">
-                      {p.ementa}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3.5 text-[#9198b0] text-[12px]">{p.autor}</td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.dot }} />
-                      <span className={`${s.text} text-[12px]`}>{s.label}</span>
                     </div>
-                    {p.orgaoAtual && (
-                      <div className="text-[10px] text-[#5c6282] mt-0.5 font-mono">{p.orgaoAtual}</div>
-                    )}
                   </td>
-                  <td className="px-4 py-3.5 text-[11px] text-[#5c6282] font-mono">{p.atualizado}</td>
-                  <td className="px-3 py-3.5">
-                    <Link
-                      href={`/proposicoes/${p.id}/tramitacao`}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-[#2d7dd2] hover:underline whitespace-nowrap"
-                    >
-                      Timeline →
-                    </Link>
+                  <td>
+                    <div style={{
+                      fontSize: 14, color: 'var(--text)', lineHeight: 1.5,
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
+                      overflow: 'hidden',
+                    }}>
+                      {p.ementa}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {p.autor?.nome || '—'}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '3px 10px', borderRadius: 99,
+                        fontSize: 12, fontWeight: 600,
+                        background: st.bg, color: st.color,
+                        alignSelf: 'flex-start',
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.color }}/>
+                        {st.label}
+                      </span>
+                      {p.orgaoDestino && (
+                        <span style={{ fontSize: 10, color: 'var(--text-4)', fontFamily: 'var(--font-mono)', paddingLeft: 2 }}>
+                          {p.orgaoDestino.sigla}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td style={{ fontSize: 13, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                    {formatarData(p.atualizadoEm)}
                   </td>
                 </tr>
               )
@@ -191,27 +244,37 @@ export default function ProposicoesPage() {
         </table>
 
         {/* Paginação */}
-        <div className="flex items-center justify-between px-5 py-3 border-t border-[#1e2333] bg-[#0f1117]">
-          <div className="text-[12px] text-[#5c6282]">
-            Mostrando <span className="text-[#9198b0]">{filtradas.length}</span> de {proposicoesMock.length} proposições
+        {!loading && total > pageSize && (
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '14px 20px', borderTop: '1px solid var(--border)', fontSize: 13, color: 'var(--text-3)',
+          }}>
+            <span>Mostrando {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} de {total}</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                style={{
+                  padding: '6px 12px', fontSize: 13, borderRadius: 6,
+                  background: 'var(--bg-base)', border: '1px solid var(--border)',
+                  color: page === 1 ? 'var(--text-4)' : 'var(--text-2)',
+                  cursor: page === 1 ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)',
+                }}>← Anterior</button>
+              <span style={{ padding: '6px 12px', fontSize: 13, color: 'var(--text-2)' }}>
+                {page} / {totalPaginas}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPaginas, p + 1))}
+                disabled={page === totalPaginas}
+                style={{
+                  padding: '6px 12px', fontSize: 13, borderRadius: 6,
+                  background: 'var(--bg-base)', border: '1px solid var(--border)',
+                  color: page === totalPaginas ? 'var(--text-4)' : 'var(--text-2)',
+                  cursor: page === totalPaginas ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)',
+                }}>Próximo →</button>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="w-7 h-7 flex items-center justify-center rounded border border-[#1e2333] text-[#5c6282] hover:border-[#2a3048] hover:text-[#9198b0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft size={13} />
-            </button>
-            <span className="text-[12px] text-[#9198b0] px-2">{page}</span>
-            <button
-              onClick={() => setPage(p => p + 1)}
-              className="w-7 h-7 flex items-center justify-center rounded border border-[#1e2333] text-[#5c6282] hover:border-[#2a3048] hover:text-[#9198b0] transition-colors"
-            >
-              <ChevronRight size={13} />
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )

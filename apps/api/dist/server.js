@@ -1018,7 +1018,9 @@ async function proposicoesRoutes(app) {
     preHandler: [requireAuth]
   }, async (req, reply) => {
     const query = listProposicaoSchema.parse(req.query);
+    const casaIdFiltro = req.user.casaId === "sistema" ? void 0 : req.user.casaId;
     const where = {
+      ...casaIdFiltro ? { casaId: casaIdFiltro } : {},
       ...query.status ? { status: query.status } : {},
       ...query.tipoMateriaId ? { tipoMateriaId: query.tipoMateriaId } : {},
       ...query.autorId ? { autorId: query.autorId } : {},
