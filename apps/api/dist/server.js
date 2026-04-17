@@ -928,8 +928,14 @@ async function authPlugin(app) {
     try {
       payload = await req.jwtVerify();
     } catch (err) {
+      const code = err?.code || "UNKNOWN";
       const msg = err?.code === "FST_JWT_AUTHORIZATION_TOKEN_EXPIRED" ? "Token expirado" : "Token inv\xE1lido";
-      return reply.status(401).send({ error: "Unauthorized", message: msg });
+      req.log.warn({ code, url, err: err?.message }, "JWT verify failed");
+      return reply.status(401).send({
+        error: "Unauthorized",
+        message: msg,
+        code
+      });
     }
     const userId = payload.sub;
     const usuario = await prisma4.usuario.findUnique({

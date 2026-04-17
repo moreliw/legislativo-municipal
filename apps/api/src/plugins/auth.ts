@@ -50,9 +50,16 @@ export async function authPlugin(app: FastifyInstance) {
     try {
       payload = await req.jwtVerify() as Record<string, unknown>
     } catch (err: any) {
-      const msg = err?.code === 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED'
+      const code = err?.code || 'UNKNOWN'
+      const msg  = err?.code === 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED'
         ? 'Token expirado' : 'Token inválido'
-      return reply.status(401).send({ error: 'Unauthorized', message: msg })
+      // Log detalhado para debug (sem vazar dados sensíveis)
+      req.log.warn({ code, url, err: err?.message }, 'JWT verify failed')
+      return reply.status(401).send({ 
+        error: 'Unauthorized', 
+        message: msg,
+        code,
+      })
     }
 
     const userId = payload.sub as string
