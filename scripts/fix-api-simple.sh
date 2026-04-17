@@ -53,6 +53,23 @@ else
   exit 1
 fi
 
+# 6.5 Garantir .env correto
+info "Configurando .env da API..."
+source /root/.legislativo-secrets
+DB_PORT="${DB_PORT:-5433}"
+cat > "$API_DIR/.env" << ENVFILE
+NODE_ENV=production
+PORT=3001
+HOST=0.0.0.0
+LOG_LEVEL=info
+DATABASE_URL=postgresql://legislativo:${DB_PASSWORD}@localhost:${DB_PORT}/legislativo
+REDIS_URL=redis://:${REDIS_PASSWORD}@localhost:${REDIS_PORT:-6380}
+JWT_SECRET=${JWT_SECRET}
+CORS_ORIGIN=https://${DOMAIN:-pleno.morelidev.com}
+FRONTEND_URL=https://${DOMAIN:-pleno.morelidev.com}
+ENVFILE
+echo ".env configurado (DB porta $DB_PORT)"
+
 # 7. Ecosystem PM2
 cat > "$APP_DIR/ecosystem.config.js" << 'PM2'
 module.exports = {
