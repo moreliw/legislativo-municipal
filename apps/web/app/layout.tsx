@@ -3,9 +3,12 @@ import './globals.css'
 import { ThemeProvider } from '@/lib/theme-context'
 import AuthGuard from '@/components/auth/AuthGuard'
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'Sistema Legislativo Municipal',
-  description: 'Gestão legislativa e documental para câmaras municipais',
+  description: 'Plataforma integrada de gestão de proposições, sessões e tramitação legislativa',
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
