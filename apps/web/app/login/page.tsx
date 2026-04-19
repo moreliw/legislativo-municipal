@@ -1,21 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
 
 const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '')
 
 function LoginForm() {
-  const router = useRouter()
-  const params = useSearchParams()
-  const nextUrl = params.get('next') || '/dashboard'
+  const router     = useRouter()
+  const params     = useSearchParams()
+  const nextUrl    = params.get('next') || '/dashboard'
 
-  const [email, setEmail]       = useState('')
-  const [senha, setSenha]       = useState('')
-  const [erro, setErro]         = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [showPwd, setShowPwd]   = useState(false)
+  const [email,    setEmail]    = useState('')
+  const [senha,    setSenha]    = useState('')
+  const [erro,     setErro]     = useState('')
+  const [loading,  setLoading]  = useState(false)
+  const [showPwd,  setShowPwd]  = useState(false)
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
@@ -41,101 +40,107 @@ function LoginForm() {
       })
       const data = await res.json()
       if (!res.ok) { setErro(data.message || 'Credenciais inválidas'); return }
-      localStorage.setItem('leg_token', data.accessToken)
-      localStorage.setItem('leg_usuario', JSON.stringify(data.usuario))
+      localStorage.setItem('leg_token',     data.accessToken)
+      localStorage.setItem('leg_usuario',   JSON.stringify(data.usuario))
       localStorage.setItem('leg_token_exp', String(Date.now() + data.expiresIn * 1000))
       router.replace(data.usuario.precisaTrocar ? '/trocar-senha' : nextUrl)
-    } catch { setErro('Não foi possível conectar ao servidor.') }
-    finally { setLoading(false) }
+    } catch {
+      setErro('Não foi possível conectar ao servidor.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (checking) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-base)' }}>
-      <div style={{ width: 24, height: 24, border: '2px solid var(--border-md)', borderTop: '2px solid var(--brand)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', background:'var(--surface-0)' }}>
+      <div style={{ width:28, height:28, border:'2px solid var(--border-2)', borderTopColor:'var(--blue)', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
     </div>
   )
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--bg-base)',
-      display: 'flex',
-      fontFamily: 'var(--font-sans)',
-    }}>
+    <div style={{ minHeight:'100vh', display:'flex', fontFamily:'var(--font-sans)', background:'var(--surface-0)' }}>
 
-      {/* Left panel — branding */}
-      <div style={{
-        flex: '0 0 420px',
-        background: 'linear-gradient(160deg, #0d1829 0%, #0a1220 40%, #080b12 100%)',
-        borderRight: '1px solid var(--border)',
+      {/* ── Left branding panel ── */}
+      <aside style={{
+        flex: '0 0 400px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         padding: '48px 44px',
+        background: 'linear-gradient(160deg, #0c1628 0%, #090e1a 50%, #060810 100%)',
         position: 'relative',
         overflow: 'hidden',
       }}>
-        {/* Background decoration */}
-        <div style={{
-          position: 'absolute', top: -80, left: -80,
-          width: 320, height: 320,
-          background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: 40, right: -60,
-          width: 240, height: 240,
-          background: 'radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }} />
+        {/* Glow blobs */}
+        <div style={{ position:'absolute', top:-120, left:-120, width:400, height:400, background:'radial-gradient(circle, rgba(37,99,192,0.10) 0%, transparent 70%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', bottom:0, right:-80, width:300, height:300, background:'radial-gradient(circle, rgba(91,62,168,0.07) 0%, transparent 70%)', pointerEvents:'none' }} />
 
-        {/* Logo */}
-        <div>
+        <div style={{ position:'relative', zIndex:1 }}>
+          {/* Logo */}
           <div style={{
-            width: 44, height: 44,
-            background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
-            borderRadius: 12,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: 32,
-            boxShadow: '0 4px 24px rgba(59,130,246,0.3)',
+            width:50, height:50,
+            background:'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
+            borderRadius:14,
+            display:'flex', alignItems:'center', justifyContent:'center',
+            marginBottom:32,
+            boxShadow:'0 8px 32px rgba(59,130,246,0.35)',
           }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M3 21H21M3 7L12 2L21 7M4 7V21M20 7V21M8 21V14C8 13.4 8.4 13 9 13H15C15.6 13 16 13.4 16 14V21" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M3 21H21M3 7L12 2L21 7M4 7V21M20 7V21M8 21V14C8 13.4 8.4 13 9 13H15C15.6 13 16 13.4 16 14V21"
+                stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
 
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#e2e8f4', lineHeight: 1.3, marginBottom: 12 }}>
-            PLENO
-          </h1>
-          <p style={{ fontSize: 14, color: '#4a556e', lineHeight: 1.7, marginBottom: 40 }}>
-            Plataforma Legislativa Nacional Online
-          </p>
+          <div style={{ fontSize:28, fontWeight:800, color:'#e8edf7', letterSpacing:'-0.03em', marginBottom:10 }}>PLENO</div>
+          <div style={{ fontSize:14, color:'#3a4a60', lineHeight:1.75, marginBottom:44 }}>
+            Plataforma Legislativa Nacional Online para câmaras municipais
+          </div>
+
+          {/* Features */}
+          {[
+            { icon:'📋', text:'Gestão de proposições e tramitação' },
+            { icon:'🗳️', text:'Controle de sessões e votações' },
+            { icon:'📁', text:'Documentos e publicação oficial' },
+            { icon:'⚖️', text:'Fluxos BPM integrados com Camunda' },
+          ].map(f => (
+            <div key={f.text} style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+              <div style={{
+                width:34, height:34, borderRadius:9,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                background:'rgba(255,255,255,0.04)',
+                border:'1px solid rgba(255,255,255,0.06)',
+                flexShrink:0, fontSize:15,
+              }}>{f.icon}</div>
+              <span style={{ fontSize:13, color:'#3d4f66', lineHeight:1.4 }}>{f.text}</span>
+            </div>
+          ))}
         </div>
 
-        {/* Bottom */}
-        <div>
-          <div style={{ height: 1, background: 'var(--border)', marginBottom: 20 }} />
-          <p style={{ fontSize: 12, color: 'var(--text-4)' }}>
+        <div style={{ position:'relative', zIndex:1 }}>
+          <div style={{ height:1, background:'rgba(255,255,255,0.05)', marginBottom:16 }} />
+          <p style={{ fontSize:11, color:'#1e2a3a', lineHeight:1.6 }}>
             Acesso monitorado e registrado conforme LGPD · Lei 13.709/2018
           </p>
         </div>
-      </div>
+      </aside>
 
-      {/* Right panel — form */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '48px 32px',
+      {/* ── Right form panel ── */}
+      <main style={{
+        flex:1,
+        display:'flex',
+        alignItems:'center',
+        justifyContent:'center',
+        padding:'40px 24px',
+        background:'var(--surface-0)',
       }}>
-        <div style={{ width: '100%', maxWidth: 380, animation: 'fadeIn 0.4s ease forwards' }}>
+        <div style={{ width:'100%', maxWidth:400, animation:'fadeIn 0.35s ease forwards' }}>
 
-          <div style={{ marginBottom: 36 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+          {/* Heading */}
+          <div style={{ marginBottom:28 }}>
+            <h2 style={{ fontSize:22, fontWeight:700, color:'var(--text-1)', marginBottom:6, letterSpacing:'-0.02em' }}>
               Entrar na conta
             </h2>
-            <p style={{ fontSize: 14, color: 'var(--text-3)' }}>
+            <p style={{ fontSize:14, color:'var(--text-3)' }}>
               Use suas credenciais institucionais
             </p>
           </div>
@@ -143,23 +148,27 @@ function LoginForm() {
           {/* Error */}
           {erro && (
             <div style={{
-              display: 'flex', alignItems: 'flex-start', gap: 10,
-              padding: '12px 14px', marginBottom: 20,
-              background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,0.2)',
-              borderRadius: 8, animation: 'fadeIn 0.2s ease',
+              display:'flex', alignItems:'flex-start', gap:10,
+              padding:'12px 14px', marginBottom:20,
+              background:'var(--red-soft)',
+              border:'1px solid rgba(184,32,32,0.2)',
+              borderRadius:8,
+              animation:'fadeIn 0.2s ease',
             }}>
-              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" style={{ flexShrink: 0, marginTop: 1 }}>
-                <circle cx="12" cy="12" r="10" stroke="#ef4444" strokeWidth="1.5"/>
-                <path d="M12 8v4M12 16h.01" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"/>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ flexShrink:0, marginTop:1 }}>
+                <circle cx="12" cy="12" r="10" stroke="var(--red)" strokeWidth="1.5"/>
+                <path d="M12 8v4M12 16h.01" stroke="var(--red)" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
-              <span style={{ fontSize: 13, color: '#ef4444', lineHeight: 1.5 }}>{erro}</span>
+              <span style={{ fontSize:13, color:'var(--red)', lineHeight:1.5 }}>{erro}</span>
             </div>
           )}
 
           <form onSubmit={onSubmit}>
             {/* Email */}
-            <div style={{ marginBottom: 18 }}>
-              <label className="label">E-mail institucional</label>
+            <div style={{ marginBottom:18 }}>
+              <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:7 }}>
+                E-mail institucional
+              </label>
               <input
                 className="input"
                 type="email"
@@ -169,18 +178,21 @@ function LoginForm() {
                 autoComplete="email"
                 required
                 disabled={loading}
+                style={{ borderRadius:9, padding:'11px 14px', fontSize:14 }}
               />
             </div>
 
             {/* Password */}
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
-                <label className="label" style={{ marginBottom: 0 }}>Senha</label>
-                <a href="/recuperar-senha" style={{ fontSize: 12, color: 'var(--brand)' }}>
+            <div style={{ marginBottom:0 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:7 }}>
+                <label style={{ fontSize:11, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'0.08em' }}>
+                  Senha
+                </label>
+                <a href="/recuperar-senha" style={{ fontSize:12, color:'var(--blue)', textDecoration:'none' }}>
                   Esqueceu a senha?
                 </a>
               </div>
-              <div style={{ position: 'relative' }}>
+              <div style={{ position:'relative' }}>
                 <input
                   className="input"
                   type={showPwd ? 'text' : 'password'}
@@ -190,15 +202,18 @@ function LoginForm() {
                   autoComplete="current-password"
                   required
                   disabled={loading}
-                  style={{ paddingRight: 44 }}
+                  style={{ paddingRight:44, borderRadius:9, padding:'11px 44px 11px 14px', fontSize:14 }}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPwd(!showPwd)}
+                  onClick={() => setShowPwd(v => !v)}
+                  aria-label={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
                   style={{
-                    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--text-3)', padding: 4, display: 'flex',
+                    position:'absolute', right:12, top:'50%', transform:'translateY(-50%)',
+                    background:'none', border:'none', cursor:'pointer',
+                    color:'var(--text-3)', padding:4,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    transition:'color 0.15s',
                   }}
                 >
                   {showPwd
@@ -209,47 +224,61 @@ function LoginForm() {
               </div>
             </div>
 
-            <div style={{ marginBottom: 24, marginTop: 20 }}>
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '11px 20px',
-                  background: loading ? '#1d3d7a' : 'var(--brand)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  fontFamily: 'var(--font-sans)',
-                  cursor: loading ? 'wait' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  transition: 'all 0.15s',
-                  boxShadow: loading ? 'none' : '0 4px 20px rgba(59,130,246,0.25)',
-                }}
-              >
-                {loading ? (
-                  <>
-                    <div style={{ width: 15, height: 15, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                    Verificando...
-                  </>
-                ) : (
-                  <>
-                    Entrar no Sistema
-                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
-                      <path d="M5 12h14M12 5l7 7-7 7" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </>
-                )}
-              </button>
-            </div>
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width:'100%', marginTop:24,
+                padding:'12px 20px',
+                background: loading ? 'var(--blue-2)' : 'var(--blue)',
+                color:'#fff', border:'none', borderRadius:9,
+                fontSize:14, fontWeight:600,
+                fontFamily:'var(--font-sans)',
+                cursor: loading ? 'wait' : 'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                transition:'all 0.15s',
+                boxShadow: loading ? 'none' : '0 4px 20px var(--brand-glow)',
+                letterSpacing:'0.01em',
+              }}
+              onMouseOver={e => { if (!loading) (e.currentTarget.style.transform = 'translateY(-1px)') }}
+              onMouseOut={e => { (e.currentTarget.style.transform = 'translateY(0)') }}
+            >
+              {loading ? (
+                <>
+                  <div style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+                  Verificando...
+                </>
+              ) : (
+                <>
+                  Entrar no Sistema
+                  <svg width="15" height="15" fill="none" viewBox="0 0 24 24">
+                    <path d="M5 12h14M12 5l7 7-7 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </>
+              )}
+            </button>
           </form>
+
+          {/* Mobile LGPD note */}
+          <p style={{ marginTop:32, fontSize:11, color:'var(--text-3)', textAlign:'center', lineHeight:1.6, display:'none' }}
+            className="login-mobile-footer">
+            Acesso monitorado conforme LGPD · Lei 13.709/2018
+          </p>
         </div>
-      </div>
+      </main>
+
+      {/* ── Responsive styles ── */}
+      <style>{`
+        @media (max-width: 768px) {
+          aside { display: none !important; }
+          main  { padding: 48px 20px !important; align-items: flex-start !important; padding-top: 60px !important; }
+          .login-mobile-footer { display: block !important; }
+        }
+        @media (max-width: 420px) {
+          main { padding: 40px 16px !important; }
+        }
+      `}</style>
     </div>
   )
 }

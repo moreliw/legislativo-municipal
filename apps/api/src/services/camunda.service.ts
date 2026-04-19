@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const CAMUNDA_API = process.env.CAMUNDA_URL || 'http://localhost:8080/engine-rest'
+const CAMUNDA_API = process.env.CAMUNDA_URL
+  ? `${process.env.CAMUNDA_URL}/engine-rest`
+  : 'http://localhost:18085/engine-rest'
 
 export interface ProcessDefinition {
   id: string
@@ -34,7 +36,6 @@ export const camundaService = {
     const formData = new FormData()
     formData.append('data', Buffer.from(bpmnXml), { filename: `${name}.bpmn`, contentType: 'application/xml' })
     formData.append('deployment-name', name)
-
     const { data } = await axios.post<DeploymentResult>(
       `${CAMUNDA_API}/deployment/create`,
       formData,
@@ -47,10 +48,9 @@ export const camundaService = {
     const payload = {
       variables: Object.entries(variables).reduce((acc, [key, value]) => ({
         ...acc,
-        [key]: { value }
-      }), {})
+        [key]: { value },
+      }), {}),
     }
-
     const { data } = await axios.post<ProcessInstance>(
       `${CAMUNDA_API}/process-definition/key/${processKey}/start`,
       payload
@@ -74,8 +74,8 @@ export const camundaService = {
     await axios.post(`${CAMUNDA_API}/task/${taskId}/complete`, {
       variables: Object.entries(variables).reduce((acc, [key, value]) => ({
         ...acc,
-        [key]: { value }
-      }), {})
+        [key]: { value },
+      }), {}),
     })
   },
 }
