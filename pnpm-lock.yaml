@@ -42,7 +42,7 @@ importers:
         specifier: ^5.14.0
         version: 5.22.0(prisma@5.22.0)
       axios:
-        specifier: ^1.7.2
+        specifier: ^1.15.0
         version: 1.15.0
       bcryptjs:
         specifier: ^2.4.3
@@ -60,7 +60,7 @@ importers:
         specifier: ^4.5.1
         version: 4.5.1
       form-data:
-        specifier: ^4.0.0
+        specifier: ^4.0.5
         version: 4.0.5
       ioredis:
         specifier: ^5.4.1

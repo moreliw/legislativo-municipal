@@ -121,6 +121,7 @@ export async function build() {
   // ── Administração do Sistema (Superadmin) ────────────────────────
   await app.register(sistemaRoutes,      { prefix: `${v1}/sistema` })
   await app.register(menusRoutes,         { prefix: `${v1}/menus` })
+  await app.register(camundaRoutes,        { prefix: `${v1}/camunda` })
 
   // ── Portal público ────────────────────────────────────────────────
   await app.register(publicacaoRoutes,   { prefix: `${v1}/publicacao` })

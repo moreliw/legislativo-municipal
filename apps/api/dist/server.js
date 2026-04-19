@@ -3864,6 +3864,7 @@ async function build() {
   await app.register(exportacaoRoutes, { prefix: `${v1}/exportar` });
   await app.register(sistemaRoutes, { prefix: `${v1}/sistema` });
   await app.register(menusRoutes, { prefix: `${v1}/menus` });
+  await app.register(camundaRoutes, { prefix: `${v1}/camunda` });
   await app.register(publicacaoRoutes, { prefix: `${v1}/publicacao` });
   app.setErrorHandler((error, req, reply) => {
     const status = error.statusCode ?? 500;
