@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { ThemeProvider } from '@/lib/theme-context'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { Providers } from './providers'
 import { ThemeProvider } from '@/components/layout/ThemeProvider'
