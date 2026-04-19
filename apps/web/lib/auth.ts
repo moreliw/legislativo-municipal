@@ -105,18 +105,32 @@ export async function refreshToken(): Promise<boolean> {
 
 // ── Fetch autenticado ─────────────────────────────────────────────────
 
+// Controle de loop de autenticação: se token inválido repete, parar
+let authFailCount = 0
+let authFailResetTimer: ReturnType<typeof setTimeout> | null = null
+
+function recordAuthFail() {
+  authFailCount++
+  if (authFailResetTimer) clearTimeout(authFailResetTimer)
+  authFailResetTimer = setTimeout(() => { authFailCount = 0 }, 5000)
+}
+
 export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
-  _retried = false
+  isRetry = false
 ): Promise<T> {
   let token = getToken()
 
   // Se token está próximo do vencimento, renovar antes
   const exp = localStorage.getItem(EXP_KEY)
-  if (exp && Date.now() > parseInt(exp) - 60_000) {
+  if (!isRetry && exp && Date.now() > parseInt(exp) - 60_000) {
     const ok = await refreshToken()
-    if (!ok) { clearAuth(); window.location.href = '/login'; throw new Error('Sessão expirada') }
+    if (!ok) {
+      clearAuth()
+      if (typeof window !== 'undefined') window.location.href = '/login'
+      throw new Error('Sessão expirada')
+    }
     token = getToken()
   }
 
@@ -131,16 +145,28 @@ export async function apiFetch<T = unknown>(
   })
 
   if (res.status === 401) {
-    // Tentar renovar somente uma vez — nunca entrar em loop infinito
-    if (!_retried) {
-      const ok = await refreshToken()
-      if (ok) {
-        return apiFetch<T>(path, options, true)
+    recordAuthFail()
+
+    // Se já fez retry ou muitas falhas consecutivas, desistir (prevenir loop)
+    if (isRetry || authFailCount > 3) {
+      clearAuth()
+      if (typeof window !== 'undefined') {
+        console.error('[auth] Loop detectado, redirecionando para login')
+        window.location.href = '/login'
       }
+      throw new Error('Sessão inválida')
     }
-    clearAuth()
-    window.location.href = '/login'
-    throw new Error('Sessão expirada')
+
+    // Tentar renovar UMA vez
+    const ok = await refreshToken()
+    if (!ok) {
+      clearAuth()
+      if (typeof window !== 'undefined') window.location.href = '/login'
+      throw new Error('Sessão expirada')
+    }
+
+    // Retry com flag isRetry=true (não renova de novo se falhar)
+    return apiFetch<T>(path, options, true)
   }
 
   if (!res.ok) {

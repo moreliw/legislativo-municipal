@@ -42,7 +42,11 @@ export async function proposicoesRoutes(app: FastifyInstance) {
   }, async (req: FastifyRequest, reply: FastifyReply) => {
     const query = listProposicaoSchema.parse(req.query)
 
+    // Multi-tenant: isola dados por casa (exceto superadmin)
+    const casaIdFiltro = req.user.casaId === 'sistema' ? undefined : req.user.casaId
+
     const where: Prisma.ProposicaoWhereInput = {
+      ...(casaIdFiltro ? { casaId: casaIdFiltro } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.tipoMateriaId ? { tipoMateriaId: query.tipoMateriaId } : {}),
       ...(query.autorId ? { autorId: query.autorId } : {}),

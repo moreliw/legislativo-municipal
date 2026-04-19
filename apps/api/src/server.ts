@@ -1,3 +1,19 @@
+// Carregar .env manualmente se não estiver carregado (fallback)
+import * as fs from 'fs'
+import * as path from 'path'
+if (!process.env.JWT_SECRET || !process.env.DATABASE_URL) {
+  const envPath = path.resolve(__dirname, '../.env')
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8')
+    for (const line of envContent.split('\n')) {
+      const match = line.match(/^([A-Z_]+)=(.*)$/)
+      if (match && !process.env[match[1]]) {
+        process.env[match[1]] = match[2]
+      }
+    }
+  }
+}
+
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
@@ -105,6 +121,7 @@ export async function build() {
   // ── Administração do Sistema (Superadmin) ────────────────────────
   await app.register(sistemaRoutes,      { prefix: `${v1}/sistema` })
   await app.register(menusRoutes,         { prefix: `${v1}/menus` })
+  await app.register(camundaRoutes,        { prefix: `${v1}/camunda` })
 
   // ── Portal público ────────────────────────────────────────────────
   await app.register(publicacaoRoutes,   { prefix: `${v1}/publicacao` })

@@ -223,3 +223,10 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.status(200).send({ message: 'Sessão revogada' })
   })
 }
+
+// Debug endpoint: mostrar payload do token atual
+// DEBUG temporário — remover em produção após diagnóstico
+/* 
+  Desabilitado via configuração. Para ativar: 
+  export DEBUG_AUTH=1
+*/

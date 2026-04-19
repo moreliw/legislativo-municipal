@@ -75,6 +75,8 @@ __export(server_exports, {
   build: () => build
 });
 module.exports = __toCommonJS(server_exports);
+var fs = __toESM(require("fs"));
+var path2 = __toESM(require("path"));
 var import_fastify = __toESM(require("fastify"));
 var import_cors = __toESM(require("@fastify/cors"));
 var import_jwt = __toESM(require("@fastify/jwt"));
@@ -902,6 +904,7 @@ var TramitacaoService = class {
 };
 
 // src/plugins/auth.ts
+var import_fastify_plugin = __toESM(require("fastify-plugin"));
 var import_client4 = require("@prisma/client");
 var prisma4 = new import_client4.PrismaClient();
 var ROTAS_PUBLICAS = [
@@ -916,7 +919,7 @@ var ROTAS_PUBLICAS = [
   "/api/v1/publicacao/portal",
   "/api/v1/publicacao/portal/"
 ];
-async function authPlugin(app) {
+async function authPluginImpl(app) {
   app.addHook("onRequest", async (req, reply) => {
     const url = req.url.split("?")[0];
     if (ROTAS_PUBLICAS.some((p) => url === p || url.startsWith(p))) return;
@@ -928,8 +931,14 @@ async function authPlugin(app) {
     try {
       payload = await req.jwtVerify();
     } catch (err) {
+      const code = err?.code || "UNKNOWN";
       const msg = err?.code === "FST_JWT_AUTHORIZATION_TOKEN_EXPIRED" ? "Token expirado" : "Token inv\xE1lido";
-      return reply.status(401).send({ error: "Unauthorized", message: msg });
+      req.log.warn({ code, url, err: err?.message }, "JWT verify failed");
+      return reply.status(401).send({
+        error: "Unauthorized",
+        message: msg,
+        code
+      });
     }
     const userId = payload.sub;
     const usuario = await prisma4.usuario.findUnique({
@@ -961,28 +970,32 @@ async function authPlugin(app) {
     };
   });
 }
+var authPlugin = (0, import_fastify_plugin.default)(authPluginImpl, { name: "auth-plugin" });
 function requireAuth(req, reply, done) {
-  if (!req.user) return reply.status(401).send({ error: "Unauthorized" });
+  if (!req.user) return reply.status(401).send({ error: "Unauthorized", message: "Autentica\xE7\xE3o necess\xE1ria" });
   done();
-}
-function requirePermission(...requeridas) {
-  return (req, reply, done) => {
-    if (!req.user) return reply.status(401).send({ error: "Unauthorized" });
-    const tem = requeridas.every((r) => checarPermissao(req.user.permissoes, r));
-    if (!tem) return reply.status(403).send({
-      error: "Forbidden",
-      message: `Permiss\xE3o insuficiente: ${requeridas.join(", ")}`
-    });
-    done();
-  };
 }
 function checarPermissao(permissoes, requerida) {
   if (permissoes.includes("*:*")) return true;
+  if (permissoes.includes(requerida)) return true;
   const [modulo, acao] = requerida.split(":");
   return permissoes.some((p) => {
     const [pm, pa] = p.split(":");
     return (pm === "*" || pm === modulo) && (pa === "*" || pa === acao);
   });
+}
+function requirePermission(...requeridas) {
+  return (req, reply, done) => {
+    if (!req.user) return reply.status(401).send({ error: "Unauthorized" });
+    const tem = requeridas.every((r) => checarPermissao(req.user.permissoes, r));
+    if (!tem) {
+      return reply.status(403).send({
+        error: "Forbidden",
+        message: `Permiss\xE3o insuficiente: ${requeridas.join(", ")}`
+      });
+    }
+    done();
+  };
 }
 
 // src/modules/proposicoes/routes.ts
@@ -1018,7 +1031,9 @@ async function proposicoesRoutes(app) {
     preHandler: [requireAuth]
   }, async (req, reply) => {
     const query = listProposicaoSchema.parse(req.query);
+    const casaIdFiltro = req.user.casaId === "sistema" ? void 0 : req.user.casaId;
     const where = {
+      ...casaIdFiltro ? { casaId: casaIdFiltro } : {},
       ...query.status ? { status: query.status } : {},
       ...query.tipoMateriaId ? { tipoMateriaId: query.tipoMateriaId } : {},
       ...query.autorId ? { autorId: query.autorId } : {},
@@ -1588,9 +1603,10 @@ var NotificacaoService = class {
 };
 
 // src/plugins/auditoria.ts
+var import_fastify_plugin2 = __toESM(require("fastify-plugin"));
 var import_client8 = require("@prisma/client");
 var prisma8 = new import_client8.PrismaClient();
-async function auditoriaPlugin(app) {
+async function auditoriaPluginImpl(app) {
   if (!app.hasDecorator("auditoria")) {
     app.decorateRequest("auditoria", null);
   }
@@ -1616,38 +1632,26 @@ async function auditoriaPlugin(app) {
     };
   });
 }
-var AuditoriaService = class {
-  prisma;
-  constructor() {
-    this.prisma = new import_client8.PrismaClient();
-  }
-  async registrar(data) {
+var auditoriaPlugin = (0, import_fastify_plugin2.default)(auditoriaPluginImpl, { name: "auditoria-plugin" });
+var auditoriaService = {
+  async registrar(params) {
     try {
-      await this.prisma.auditoriaLog.create({ data });
-    } catch {
+      await prisma8.auditoriaLog.create({
+        data: {
+          entidade: params.entidade,
+          entidadeId: params.entidadeId,
+          acao: params.acao,
+          usuarioId: params.usuarioId ?? null,
+          ip: params.ip ?? "",
+          endpoint: params.endpoint ?? "",
+          dadosAntes: params.dadosAntes ?? void 0,
+          dadosDepois: params.dadosDepois ?? void 0
+        }
+      });
+    } catch (err) {
     }
   }
-  async listar(filtros) {
-    const { entidade, entidadeId, usuarioId, de, ate, page = 1, pageSize = 50 } = filtros;
-    const where = {};
-    if (entidade) where.entidade = entidade;
-    if (entidadeId) where.entidadeId = entidadeId;
-    if (usuarioId) where.usuarioId = usuarioId;
-    if (de || ate) where.criadoEm = { ...de ? { gte: de } : {}, ...ate ? { lte: ate } : {} };
-    const [total, data] = await Promise.all([
-      this.prisma.auditoriaLog.count({ where }),
-      this.prisma.auditoriaLog.findMany({
-        where,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        orderBy: { criadoEm: "desc" },
-        include: { usuario: { select: { nome: true, email: true } } }
-      })
-    ]);
-    return { data, meta: { total, page, pageSize, totalPages: Math.ceil(total / pageSize) } };
-  }
 };
-var auditoriaService = new AuditoriaService();
 
 // src/modules/tramitacao/routes.ts
 var prisma9 = new import_client9.PrismaClient();
@@ -2601,11 +2605,11 @@ async function gerarRelatorioProposicoes(params) {
   return bufferFromDoc(docDefinition);
 }
 function bufferFromDoc(docDef) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     const pdfDoc = printer.createPdfKitDocument(docDef);
     const chunks = [];
     pdfDoc.on("data", (chunk) => chunks.push(chunk));
-    pdfDoc.on("end", () => resolve(Buffer.concat(chunks)));
+    pdfDoc.on("end", () => resolve2(Buffer.concat(chunks)));
     pdfDoc.on("error", reject);
     pdfDoc.end();
   });
@@ -3748,8 +3752,9 @@ async function menusRoutes(app) {
 
 // src/plugins/swagger.ts
 var import_swagger = __toESM(require("@fastify/swagger"));
+var import_fastify_plugin3 = __toESM(require("fastify-plugin"));
 var import_swagger_ui = __toESM(require("@fastify/swagger-ui"));
-async function swaggerPlugin(app) {
+async function swaggerPluginImpl(app) {
   await app.register(import_swagger.default, {
     openapi: {
       info: {
@@ -3775,17 +3780,32 @@ async function swaggerPlugin(app) {
   });
   app.log.info("Swagger UI dispon\xEDvel em /docs");
 }
+var swaggerPlugin = (0, import_fastify_plugin3.default)(swaggerPluginImpl, { name: "swaggerPlugin" });
 
 // src/plugins/lgpd.ts
-async function lgpdPlugin(app) {
+var import_fastify_plugin4 = __toESM(require("fastify-plugin"));
+async function lgpdPluginImpl(app) {
   app.addHook("onSend", async (req, reply, payload) => {
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("X-Privacy-Policy", "https://legislativo.gov.br/privacidade");
     return payload;
   });
 }
+var lgpdPlugin = (0, import_fastify_plugin4.default)(lgpdPluginImpl, { name: "lgpdPlugin" });
 
 // src/server.ts
+if (!process.env.JWT_SECRET || !process.env.DATABASE_URL) {
+  const envPath = path2.resolve(__dirname, "../.env");
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, "utf8");
+    for (const line of envContent.split("\n")) {
+      const match = line.match(/^([A-Z_]+)=(.*)$/);
+      if (match && !process.env[match[1]]) {
+        process.env[match[1]] = match[2];
+      }
+    }
+  }
+}
 var JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error("JWT_SECRET deve ter pelo menos 32 caracteres");
@@ -3844,6 +3864,7 @@ async function build() {
   await app.register(exportacaoRoutes, { prefix: `${v1}/exportar` });
   await app.register(sistemaRoutes, { prefix: `${v1}/sistema` });
   await app.register(menusRoutes, { prefix: `${v1}/menus` });
+  await app.register(camundaRoutes, { prefix: `${v1}/camunda` });
   await app.register(publicacaoRoutes, { prefix: `${v1}/publicacao` });
   app.setErrorHandler((error, req, reply) => {
     const status = error.statusCode ?? 500;

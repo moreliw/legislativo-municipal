@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -228,7 +228,6 @@ code, pre { font-family: var(--font-mono); }
 }
 
 .input {
-  width: 100%;
   background: var(--surface-1);
   border: 1px solid var(--border-2);
   border-radius: 8px;
