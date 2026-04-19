@@ -2,12 +2,17 @@ import { FastifyInstance } from 'fastify'
 import { camundaService } from '../../services/camunda.service'
 import { requirePermission } from '../../plugins/auth'
 
+function isCamundaUnavailable(err: any): boolean {
+  return err?.code === 'ECONNREFUSED' || err?.code === 'ECONNABORTED' || err?.code === 'ERR_CANCELED'
+}
+
 export async function camundaRoutes(app: FastifyInstance) {
   app.get('/definitions', { preHandler: [requirePermission('processos:ler')] }, async (req, reply) => {
     try {
       const definitions = await camundaService.listProcessDefinitions()
       return reply.send(definitions)
     } catch (err: any) {
+      if (isCamundaUnavailable(err)) return reply.send([])
       return reply.status(500).send({ error: 'Erro ao listar processos', message: err.message })
     }
   })
@@ -39,6 +44,7 @@ export async function camundaRoutes(app: FastifyInstance) {
       const instances = await camundaService.listProcessInstances(processKey)
       return reply.send(instances)
     } catch (err: any) {
+      if (isCamundaUnavailable(err)) return reply.send([])
       return reply.status(500).send({ error: 'Erro ao listar instâncias', message: err.message })
     }
   })
@@ -49,6 +55,7 @@ export async function camundaRoutes(app: FastifyInstance) {
       const tasks = await camundaService.listTasks(processInstanceId)
       return reply.send(tasks)
     } catch (err: any) {
+      if (isCamundaUnavailable(err)) return reply.send([])
       return reply.status(500).send({ error: 'Erro ao listar tarefas', message: err.message })
     }
   })
