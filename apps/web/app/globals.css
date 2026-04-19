@@ -140,7 +140,7 @@ html {
   background-color: var(--surface-0);
   color: var(--text-1);
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -228,6 +228,7 @@ code, pre { font-family: var(--font-mono); }
 }
 
 .input {
+  width: 100%;
   background: var(--surface-1);
   border: 1px solid var(--border-2);
   border-radius: 8px;
@@ -312,6 +313,6 @@ code, pre { font-family: var(--font-mono); }
 .page-title { font-size: 20px; font-weight: 700; color: var(--text-1); }
 .page-subtitle { font-size: 14px; color: var(--text-3); margin-top: 4px; }
 
-@media (max-width: 1024px) {
-  html { font-size: 14px; }
+@media (max-width: 768px) {
+  html { font-size: 15px; }
 }

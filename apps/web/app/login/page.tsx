@@ -137,12 +137,9 @@ function LoginForm() {
 
           {/* Heading */}
           <div style={{ marginBottom:28 }}>
-            <h2 style={{ fontSize:22, fontWeight:700, color:'var(--text-1)', marginBottom:6, letterSpacing:'-0.02em' }}>
+            <h2 style={{ fontSize:22, fontWeight:700, color:'var(--text-1)', marginBottom:0, letterSpacing:'-0.02em' }}>
               Entrar na conta
             </h2>
-            <p style={{ fontSize:14, color:'var(--text-3)' }}>
-              Use suas credenciais institucionais
-            </p>
           </div>
 
           {/* Error */}
@@ -178,7 +175,7 @@ function LoginForm() {
                 autoComplete="email"
                 required
                 disabled={loading}
-                style={{ borderRadius:9, padding:'11px 14px', fontSize:14 }}
+                style={{ borderRadius:9, padding:'11px 14px', fontSize:14, width:'100%' }}
               />
             </div>
 
@@ -192,7 +189,7 @@ function LoginForm() {
                   Esqueceu a senha?
                 </a>
               </div>
-              <div style={{ position:'relative' }}>
+              <div style={{ position:'relative', width:'100%' }}>
                 <input
                   className="input"
                   type={showPwd ? 'text' : 'password'}
@@ -202,7 +199,7 @@ function LoginForm() {
                   autoComplete="current-password"
                   required
                   disabled={loading}
-                  style={{ paddingRight:44, borderRadius:9, padding:'11px 44px 11px 14px', fontSize:14 }}
+                  style={{ borderRadius:9, padding:'11px 44px 11px 14px', fontSize:14 }}
                 />
                 <button
                   type="button"

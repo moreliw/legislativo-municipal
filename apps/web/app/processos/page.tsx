@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Play, Plus, RefreshCw, CheckCircle } from 'lucide-react'
+import { apiFetch } from '@/lib/auth'
 
 interface ProcessDefinition {
   id: string
@@ -36,15 +37,15 @@ export default function ProcessosPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const [defsRes, instsRes, tasksRes] = await Promise.all([
-        fetch('/api/v1/camunda/definitions'),
-        fetch('/api/v1/camunda/instances'),
-        fetch('/api/v1/camunda/tasks'),
+      const [defs, insts, taskList] = await Promise.allSettled([
+        apiFetch<ProcessDefinition[]>('/api/v1/camunda/definitions'),
+        apiFetch<ProcessInstance[]>('/api/v1/camunda/instances'),
+        apiFetch<Task[]>('/api/v1/camunda/tasks'),
       ])
 
-      if (defsRes.ok) setDefinitions(await defsRes.json())
-      if (instsRes.ok) setInstances(await instsRes.json())
-      if (tasksRes.ok) setTasks(await tasksRes.json())
+      if (defs.status === 'fulfilled')     setDefinitions(defs.value)
+      if (insts.status === 'fulfilled')    setInstances(insts.value)
+      if (taskList.status === 'fulfilled') setTasks(taskList.value)
     } catch (err) {
       console.error('Erro ao carregar processos:', err)
     } finally {
@@ -54,9 +55,8 @@ export default function ProcessosPage() {
 
   async function startProcess(processKey: string) {
     try {
-      await fetch(`/api/v1/camunda/start/${processKey}`, {
+      await apiFetch(`/api/v1/camunda/start/${processKey}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ variables: {} }),
       })
       loadData()
@@ -67,9 +67,8 @@ export default function ProcessosPage() {
 
   async function completeTask(taskId: string) {
     try {
-      await fetch(`/api/v1/camunda/tasks/${taskId}/complete`, {
+      await apiFetch(`/api/v1/camunda/tasks/${taskId}/complete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ variables: {} }),
       })
       loadData()

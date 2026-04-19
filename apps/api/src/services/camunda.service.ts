@@ -4,6 +4,8 @@ const CAMUNDA_API = process.env.CAMUNDA_URL
   ? `${process.env.CAMUNDA_URL}/engine-rest`
   : 'http://localhost:18085/engine-rest'
 
+const http = axios.create({ baseURL: CAMUNDA_API, timeout: 8000 })
+
 export interface ProcessDefinition {
   id: string
   key: string
@@ -27,7 +29,7 @@ export interface DeploymentResult {
 
 export const camundaService = {
   async listProcessDefinitions() {
-    const { data } = await axios.get<ProcessDefinition[]>(`${CAMUNDA_API}/process-definition`)
+    const { data } = await http.get<ProcessDefinition[]>('/process-definition')
     return data
   },
 
@@ -36,8 +38,8 @@ export const camundaService = {
     const formData = new FormData()
     formData.append('data', Buffer.from(bpmnXml), { filename: `${name}.bpmn`, contentType: 'application/xml' })
     formData.append('deployment-name', name)
-    const { data } = await axios.post<DeploymentResult>(
-      `${CAMUNDA_API}/deployment/create`,
+    const { data } = await http.post<DeploymentResult>(
+      '/deployment/create',
       formData,
       { headers: formData.getHeaders() }
     )
@@ -51,8 +53,8 @@ export const camundaService = {
         [key]: { value },
       }), {}),
     }
-    const { data } = await axios.post<ProcessInstance>(
-      `${CAMUNDA_API}/process-definition/key/${processKey}/start`,
+    const { data } = await http.post<ProcessInstance>(
+      `/process-definition/key/${processKey}/start`,
       payload
     )
     return data
@@ -60,18 +62,18 @@ export const camundaService = {
 
   async listProcessInstances(processKey?: string) {
     const params = processKey ? { processDefinitionKey: processKey } : {}
-    const { data } = await axios.get<ProcessInstance[]>(`${CAMUNDA_API}/process-instance`, { params })
+    const { data } = await http.get<ProcessInstance[]>('/process-instance', { params })
     return data
   },
 
   async listTasks(processInstanceId?: string) {
     const params = processInstanceId ? { processInstanceId } : {}
-    const { data } = await axios.get(`${CAMUNDA_API}/task`, { params })
+    const { data } = await http.get('/task', { params })
     return data
   },
 
   async completeTask(taskId: string, variables: Record<string, any> = {}) {
-    await axios.post(`${CAMUNDA_API}/task/${taskId}/complete`, {
+    await http.post(`/task/${taskId}/complete`, {
       variables: Object.entries(variables).reduce((acc, [key, value]) => ({
         ...acc,
         [key]: { value },
