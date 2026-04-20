@@ -143,6 +143,11 @@ export async function proposicoesRoutes(app: FastifyInstance) {
 
     if (!proposicao) return reply.status(404).send({ error: 'Proposição não encontrada' })
 
+    // Verificar isolamento multi-tenant
+    if (req.user.casaId !== 'sistema' && proposicao.casaId !== req.user.casaId) {
+      return reply.status(404).send({ error: 'Proposição não encontrada' })
+    }
+
     // Auditoria de leitura
     await req.auditoria?.registrar({
       entidade: 'Proposicao',
@@ -228,15 +233,31 @@ export async function proposicoesRoutes(app: FastifyInstance) {
           },
         })
 
-        await prisma.instanciaProcesso.create({
-          data: {
-            proposicaoId: proposicao.id,
-            fluxoProcessoId: 'default', // referência ao fluxo ativo
-            camundaInstanceId: instance.id,
-            camundaStatus: 'ACTIVE',
-            etapaAtual: 'task_analise_inicial',
+        // Buscar fluxo ativo para o tipo de matéria (ou qualquer fluxo ativo)
+        const fluxo = await prisma.fluxoProcesso.findFirst({
+          where: {
+            status: 'ATIVO',
+            OR: [
+              { tipoMateriaId: proposicao.tipoMateriaId },
+              { tipoMateriaId: null },
+            ],
           },
+          orderBy: [{ tipoMateriaId: 'desc' }, { criadoEm: 'desc' }],
         })
+
+        if (fluxo) {
+          await prisma.instanciaProcesso.create({
+            data: {
+              proposicaoId: proposicao.id,
+              fluxoProcessoId: fluxo.id,
+              camundaInstanceId: instance.id,
+              camundaStatus: 'ACTIVE',
+              etapaAtual: 'task_analise_inicial',
+            },
+          })
+        } else {
+          req.log.warn({ proposicaoId: proposicao.id }, 'Nenhum FluxoProcesso ativo encontrado — instância Camunda criada sem vínculo')
+        }
       } catch (err) {
         req.log.error({ err }, 'Falha ao iniciar processo no Camunda')
       }

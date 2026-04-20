@@ -2,6 +2,9 @@ import { FastifyInstance, FastifyRequest } from 'fastify'
 import { PrismaClient } from '@prisma/client'
 import { requireAuth, requirePermission } from '../../plugins/auth'
 import { camundaService } from './camunda.service'
+import { TramitacaoService } from '../tramitacao/tramitacao.service'
+import { NotificacaoService } from '../notificacoes/notificacao.service'
+import { auditoriaService } from '../../plugins/auditoria'
 
 const prisma = new PrismaClient()
 
@@ -142,6 +145,98 @@ export async function processosRoutes(app: FastifyInstance) {
     return tarefas
   })
 
+  // ── COMPLETAR TAREFA ──────────────────────────────────────────────
+  app.post('/tarefas/:taskId/completar', {
+    preHandler: [requireAuth],
+  }, async (req: FastifyRequest<{
+    Params: { taskId: string }
+    Body: {
+      variaveis?: Record<string, unknown>
+      tipoEvento?: string
+      descricao?: string
+      observacao?: string
+      novoStatus?: string
+    }
+  }>, reply) => {
+    const { taskId } = req.params
+    const { variaveis = {}, tipoEvento, descricao, observacao, novoStatus } = req.body as {
+      variaveis?: Record<string, unknown>
+      tipoEvento?: string
+      descricao?: string
+      observacao?: string
+      novoStatus?: string
+    }
+
+    const tarefa = await prisma.tarefaProcesso.findUnique({
+      where: { camundaTaskId: taskId },
+      include: {
+        instancia: { include: { proposicao: true } },
+      },
+    })
+    if (!tarefa) return reply.status(404).send({ error: 'Tarefa não encontrada' })
+
+    // Verificar se o usuário tem permissão para esta tarefa
+    if (tarefa.atribuidoAId && tarefa.atribuidoAId !== req.user.id) {
+      const userOrgaos: string[] = (req.user as any).orgaos ?? []
+      if (!tarefa.atribuidoAOrgaoId || !userOrgaos.includes(tarefa.atribuidoAOrgaoId)) {
+        return reply.status(403).send({ error: 'Sem permissão para completar esta tarefa' })
+      }
+    }
+
+    // Formatar variáveis para o Camunda
+    const camundaVars: Record<string, { value: unknown; type: 'String' | 'Boolean' | 'Integer' | 'Long' | 'Double' | 'Json' }> = {}
+    for (const [key, val] of Object.entries(variaveis)) {
+      const type = typeof val === 'boolean' ? 'Boolean' : typeof val === 'number' ? 'Long' : 'String'
+      camundaVars[key] = { value: val, type }
+    }
+
+    // Completar no Camunda
+    try {
+      await camundaService.completeTask(taskId, camundaVars)
+    } catch (err) {
+      req.log.error({ err, taskId }, 'Falha ao completar tarefa no Camunda')
+      return reply.status(502).send({ error: 'Falha ao comunicar com Camunda' })
+    }
+
+    // Atualizar TarefaProcesso no banco
+    await prisma.tarefaProcesso.update({
+      where: { camundaTaskId: taskId },
+      data: {
+        status: 'CONCLUIDA',
+        concluida: true,
+        concluidaEm: new Date(),
+        atualizadoEm: new Date(),
+        variaveis: variaveis as any,
+      },
+    })
+
+    // Registrar evento de tramitação se houver proposição vinculada
+    if (tarefa.instancia?.proposicao) {
+      const proposicaoId = tarefa.instancia.proposicao.id
+      try {
+        const tramitacaoSvc = new TramitacaoService(
+          camundaService,
+          new NotificacaoService(),
+          auditoriaService,
+        )
+        await tramitacaoSvc.registrarEvento({
+          proposicaoId,
+          tipo: (tipoEvento as any) || 'DESPACHO',
+          descricao: descricao || `Tarefa "${tarefa.nome}" concluída`,
+          usuarioId: req.user.id,
+          observacao,
+          camundaTaskId: taskId,
+          ...(novoStatus ? { novoStatus: novoStatus as any } : {}),
+          dadosAdicionais: { variaveis, taskId },
+        }, req.user.id)
+      } catch (err) {
+        req.log.warn({ err }, 'Falha ao registrar evento de tramitação')
+      }
+    }
+
+    return { ok: true }
+  })
+
   // ── ASSUMIR TAREFA ────────────────────────────────────────────────
   app.post('/tarefas/:taskId/assumir', {
     preHandler: [requireAuth],
@@ -188,13 +283,18 @@ export async function processosRoutes(app: FastifyInstance) {
 
   // ── AVALIAR REGRA DMN ─────────────────────────────────────────────
   app.post('/avaliar-decisao', {
-    preHandler: [requireAuth],
+    preHandler: [requireAuth, requirePermission('processos:ler')],
   }, async (req: FastifyRequest<{
     Body: { decisionKey: string; variaveis: Record<string, unknown> }
   }>, reply) => {
     const { decisionKey, variaveis } = req.body as {
       decisionKey: string
       variaveis: Record<string, unknown>
+    }
+
+    // Allowlist — apenas chaves alfanuméricas/hífens são válidas
+    if (!decisionKey || !/^[a-zA-Z0-9_-]+$/.test(decisionKey)) {
+      return reply.status(400).send({ error: 'decisionKey inválida' })
     }
 
     const camundaVars: Record<string, { value: unknown; type: string }> = {}
