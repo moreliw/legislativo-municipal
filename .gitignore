@@ -48,6 +48,8 @@ infra/docker/data/
 # Uploads (local dev)
 uploads/
 
-# Claude Code
+# Claude Code — ignorar configs pessoais, manter skills de equipe
 .claude/
+!.claude/skills/
+!.claude/skills/**
 
