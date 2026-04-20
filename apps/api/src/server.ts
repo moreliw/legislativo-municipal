@@ -40,6 +40,7 @@ import { exportacaoRoutes }    from './modules/exportacao/routes'
 import { sistemaRoutes }       from './modules/sistema/routes'
 import { menusRoutes }          from './modules/menus/routes'
 import { camundaRoutes }       from './modules/camunda/routes'
+import { publicoRoutes }       from './modules/publico/routes'
 import { swaggerPlugin }       from './plugins/swagger'
 import { authPlugin }          from './plugins/auth'
 import { auditoriaPlugin }     from './plugins/auditoria'
@@ -126,6 +127,7 @@ export async function build() {
 
   // ── Portal público ────────────────────────────────────────────────
   await app.register(publicacaoRoutes,   { prefix: `${v1}/publicacao` })
+  await app.register(publicoRoutes,      { prefix: `${v1}/publico` })
 
   // ── Error handler ─────────────────────────────────────────────────
   app.setErrorHandler((error, req, reply) => {

@@ -58,8 +58,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [menuData, setMenuData] = useState<MenuData | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [loading, setLoading]   = useState(true)
+  const [naoLidas, setNaoLidas] = useState(0)
   const usuario = getUsuario()
   const { theme, toggle } = useTheme()
+
+  const fetchNaoLidas = useCallback(async () => {
+    try {
+      const data = await apiFetch<{ meta: { naoLidas: number } }>('/api/v1/notificacoes?pageSize=1')
+      setNaoLidas(data.meta?.naoLidas ?? 0)
+    } catch { /* silencioso */ }
+  }, [])
 
   useEffect(() => {
     const token = getToken()
@@ -68,7 +76,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     apiFetch<MenuData>('/api/v1/menus')
       .then(data => { setMenuData(data); setLoading(false) })
       .catch(() => { setLoading(false) })
-  }, [])
+
+    fetchNaoLidas()
+    const interval = setInterval(fetchNaoLidas, 30_000)
+    return () => clearInterval(interval)
+  }, [fetchNaoLidas])
 
   useEffect(() => { setMenuOpen(false) }, [pathname])
 
@@ -257,24 +269,52 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {menuData?.isSuperAdmin ? 'Administração Geral do Sistema' : (usuario?.casaNome || 'Câmara Municipal')}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Notification Bell */}
+            <Link
+              href="/notificacoes"
+              aria-label={`Notificações${naoLidas > 0 ? ` — ${naoLidas} não lidas` : ''}`}
+              style={{
+                position: 'relative' as const,
+                width: 30, height: 30, borderRadius: 8,
+                border: '1px solid var(--border)',
+                background: naoLidas > 0 ? 'var(--bg-raised)' : 'var(--bg-raised)',
+                color: naoLidas > 0 ? 'var(--brand)' : 'var(--text-2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                textDecoration: 'none', flexShrink: 0,
+              }}
+            >
+              <IconSvg name="bell" size={15} />
+              {naoLidas > 0 && (
+                <span style={{
+                  position: 'absolute' as const, top: -4, right: -4,
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  background: '#ef4444', color: '#fff',
+                  fontSize: 9, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '0 3px', lineHeight: 1,
+                  border: '1.5px solid var(--bg-surface)',
+                }}>
+                  {naoLidas > 99 ? '99+' : naoLidas}
+                </span>
+              )}
+            </Link>
+
+            {/* Theme toggle */}
             <button
               onClick={toggle}
               aria-label="Alternar tema"
               style={{
-                width: 30,
-                height: 30,
-                borderRadius: 8,
+                width: 30, height: 30, borderRadius: 8,
                 border: '1px solid var(--border)',
                 background: 'var(--bg-raised)',
                 color: 'var(--text-2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
               }}
             >
               {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
             </button>
+
             <div style={{ fontSize: 12, color: 'var(--text-4)', fontFamily: 'var(--font-mono)' }}>
               {new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' })}
             </div>
