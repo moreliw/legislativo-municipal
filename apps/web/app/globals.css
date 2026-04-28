@@ -316,3 +316,21 @@ code, pre { font-family: var(--font-mono); }
 @media (max-width: 768px) {
   html { font-size: 15px; }
 }
+
+.bpmn-canvas {
+  width: 100%;
+  min-height: 360px;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.bpmn-canvas .djs-container {
+  background: var(--surface-0);
+}
+
+.bpmn-canvas .djs-element.is-active-task .djs-visual > :first-child {
+  stroke: var(--green) !important;
+  stroke-width: 3px !important;
+  fill: var(--green-soft) !important;
+}

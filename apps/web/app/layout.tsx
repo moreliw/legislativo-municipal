@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import 'bpmn-js/dist/assets/diagram-js.css'
+import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { Providers } from './providers'
 import { ThemeProvider } from '@/components/layout/ThemeProvider'

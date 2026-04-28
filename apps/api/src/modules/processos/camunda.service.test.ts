@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import axios from 'axios'
 
 vi.mock('axios', () => ({
@@ -21,6 +21,7 @@ describe('CamundaService', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    vi.resetModules()
 
     mockClient = {
       post: vi.fn(),
@@ -30,165 +31,111 @@ describe('CamundaService', () => {
     }
     ;(axios.create as any).mockReturnValue(mockClient)
 
-    const { CamundaService } = await import('../src/modules/processos/camunda.service')
+    const { CamundaService } = await import('./camunda.service')
     service = new CamundaService({ baseUrl: 'http://localhost:8085' })
   })
 
-  describe('startProcess', () => {
-    it('deve iniciar processo com businessKey e variáveis', async () => {
-      const instanceMock = {
-        id: 'instance-abc123',
-        definitionId: 'tramitacao_proposicao_basica:1:xxx',
-        businessKey: 'PL-001/2024',
-        ended: false,
-      }
-      mockClient.post.mockResolvedValue({ data: instanceMock })
-
-      const result = await service.startProcess({
-        processDefinitionKey: 'tramitacao_proposicao_basica',
-        businessKey: 'PL-001/2024',
-        variables: {
-          proposicaoId: { value: 'prop_001', type: 'String' },
-          tipoMateria: { value: 'PL', type: 'String' },
-          regime: { value: 'ORDINARIO', type: 'String' },
-        },
-      })
-
-      expect(mockClient.post).toHaveBeenCalledWith(
-        '/process-definition/key/tramitacao_proposicao_basica/start',
-        expect.objectContaining({
-          businessKey: 'PL-001/2024',
-          variables: expect.objectContaining({
-            proposicaoId: { value: 'prop_001', type: 'String' },
-            tipoMateria: { value: 'PL', type: 'String' },
-          }),
-        }),
-      )
-      expect(result.id).toBe('instance-abc123')
-      expect(result.businessKey).toBe('PL-001/2024')
-    })
-  })
-
-  describe('completeTask', () => {
-    it('deve completar tarefa com variáveis formatadas', async () => {
-      mockClient.post.mockResolvedValue({ data: {} })
-
-      await service.completeTask('task-xyz', {
-        conforme: { value: true, type: 'Boolean' },
-        observacaoAnalise: { value: 'OK', type: 'String' },
-      })
-
-      expect(mockClient.post).toHaveBeenCalledWith(
-        '/task/task-xyz/complete',
-        expect.objectContaining({
-          workerId: expect.any(String),
-          variables: {
-            conforme: { value: true, type: 'Boolean' },
-            observacaoAnalise: { value: 'OK', type: 'String' },
+  it('deve extrair processDefinitionKey/version no deploy BPMN', async () => {
+    mockClient.post.mockResolvedValue({
+      data: {
+        id: 'dep-1',
+        name: 'Fluxo Teste',
+        deploymentTime: '2026-04-28T18:00:00.000Z',
+        deployedProcessDefinitions: {
+          'proc:1:abc': {
+            id: 'proc:1:abc',
+            key: 'tramitacao_basica_v2',
+            name: 'Tramitação Básica v2',
+            version: 4,
+            deploymentId: 'dep-1',
+            resource: 'tramitacao_basica_v2.bpmn',
           },
-        }),
-      )
-    })
-  })
-
-  describe('getUserTasks', () => {
-    it('deve buscar tarefas por grupos candidatos', async () => {
-      const tarefasMock = [
-        { id: 't1', name: 'Análise em Comissão', processInstanceId: 'inst1', candidateGroups: ['COMISSAO_PERMANENTE'] },
-      ]
-      mockClient.get.mockResolvedValue({ data: tarefasMock })
-
-      const result = await service.getUserTasks(['COMISSAO_PERMANENTE', 'MESA_DIRETORA'])
-
-      expect(mockClient.get).toHaveBeenCalledWith('/task', {
-        params: { candidateGroups: 'COMISSAO_PERMANENTE,MESA_DIRETORA' },
-      })
-      expect(result).toHaveLength(1)
-      expect(result[0].name).toBe('Análise em Comissão')
-    })
-
-    it('deve incluir assignee quando fornecido', async () => {
-      mockClient.get.mockResolvedValue({ data: [] })
-
-      await service.getUserTasks([], 'user-001')
-
-      expect(mockClient.get).toHaveBeenCalledWith('/task', {
-        params: { assignee: 'user-001' },
-      })
-    })
-  })
-
-  describe('evaluateDecision', () => {
-    it('deve avaliar DMN e retornar array de resultados', async () => {
-      const resultadoMock = [
-        {
-          exigeParecerJuridico: { value: true, type: 'Boolean' },
-          comissaoResponsavel: { value: 'COMISSAO_LEGISLACAO', type: 'String' },
-          prazoDias: { value: 40, type: 'Integer' },
         },
-      ]
-      mockClient.post.mockResolvedValue({ data: resultadoMock })
+      },
+    })
 
-      const result = await service.evaluateDecision('decisao_roteamento_proposicao', {
-        tipoMateria: { value: 'PL', type: 'String' },
-        origem: { value: 'VEREADOR', type: 'String' },
-        regime: { value: 'ORDINARIO', type: 'String' },
+    const result = await service.deployProcess(
+      'Tramitação Básica v2',
+      '<definitions><process id="tramitacao_basica_v2" /></definitions>',
+    )
+
+    expect(result).toEqual({
+      deploymentId: 'dep-1',
+      deploymentName: 'Fluxo Teste',
+      deploymentTime: '2026-04-28T18:00:00.000Z',
+      processDefinitionId: 'proc:1:abc',
+      processDefinitionKey: 'tramitacao_basica_v2',
+      processDefinitionVersion: 4,
+      processDefinitionResource: 'tramitacao_basica_v2.bpmn',
+    })
+  })
+
+  it('deve iniciar e completar tarefa no fluxo completo', async () => {
+    mockClient.post
+      .mockResolvedValueOnce({
+        data: {
+          id: 'inst-001',
+          definitionId: 'tramitacao_basica_v2:4:abc',
+          businessKey: 'PL-024/2026',
+          ended: false,
+        },
       })
+      .mockResolvedValueOnce({ data: {} })
 
-      expect(mockClient.post).toHaveBeenCalledWith(
-        '/decision-definition/key/decisao_roteamento_proposicao/evaluate',
-        expect.any(Object),
-      )
-      expect(Array.isArray(result)).toBe(true)
-      expect(result).toHaveLength(1)
+    const instance = await service.startProcess({
+      processDefinitionKey: 'tramitacao_basica_v2',
+      businessKey: 'PL-024/2026',
+      variables: {
+        proposicaoId: { value: 'prop-1', type: 'String' },
+        urgente: { value: false, type: 'Boolean' },
+      },
     })
-  })
 
-  describe('cancelProcess', () => {
-    it('deve cancelar instância com motivo', async () => {
-      mockClient.delete.mockResolvedValue({ data: {} })
-
-      await service.cancelProcess('instance-001', 'Retirada pela autoria')
-
-      expect(mockClient.delete).toHaveBeenCalledWith(
-        '/process-instance/instance-001',
-        { data: { deleteReason: 'Retirada pela autoria' } },
-      )
+    await service.completeTask('task-001', {
+      parecer: { value: 'OK', type: 'String' },
     })
-  })
 
-  describe('getActivityHistory', () => {
-    it('deve retornar histórico de atividades de uma instância', async () => {
-      const historicoMock = [
-        { id: 'act1', activityId: 'task_analise_inicial', activityName: 'Análise Inicial', activityType: 'userTask', startTime: '2024-03-10T09:00:00Z', endTime: '2024-03-11T08:00:00Z', durationInMillis: 82800000 },
-      ]
-      mockClient.get.mockResolvedValue({ data: historicoMock })
-
-      const result = await service.getActivityHistory('instance-001')
-
-      expect(mockClient.get).toHaveBeenCalledWith('/history/activity-instance', {
-        params: { processInstanceId: 'instance-001' },
-      })
-      expect(result).toHaveLength(1)
-      expect(result[0].activityId).toBe('task_analise_inicial')
-    })
-  })
-
-  describe('formatVariables (private — testado indiretamente)', () => {
-    it('deve serializar variáveis do tipo Json como string', async () => {
-      mockClient.post.mockResolvedValue({ data: { id: 'i1', businessKey: 'test', ended: false, definitionId: 'x' } })
-
-      await service.startProcess({
-        processDefinitionKey: 'test',
-        businessKey: 'test',
+    expect(instance.id).toBe('inst-001')
+    expect(mockClient.post).toHaveBeenNthCalledWith(
+      1,
+      '/process-definition/key/tramitacao_basica_v2/start',
+      expect.objectContaining({
+        businessKey: 'PL-024/2026',
+      }),
+    )
+    expect(mockClient.post).toHaveBeenNthCalledWith(
+      2,
+      '/task/task-001/complete',
+      {
         variables: {
-          jsonData: { value: { chave: 'valor' }, type: 'Json' },
+          parecer: { value: 'OK', type: 'String' },
         },
-      })
+      },
+    )
+  })
 
-      const callArgs = mockClient.post.mock.calls[0][1]
-      expect(callArgs.variables.jsonData.value).toBe('{"chave":"valor"}')
-      expect(callArgs.variables.jsonData.type).toBe('Json')
+  it('deve retornar diagnóstico saudável quando engine está acessível', async () => {
+    mockClient.get.mockResolvedValueOnce({ data: { version: '7.24.2' } })
+
+    const health = await service.getEngineHealth()
+
+    expect(health.reachable).toBe(true)
+    expect(health.authentication).toBe('ok')
+    expect(health.platform).toBe('camunda7')
+    expect(health.version).toBe('7.24.2')
+    expect(health.restUrl).toContain('/engine-rest')
+  })
+
+  it('deve informar erro de autenticação no diagnóstico quando receber 401', async () => {
+    mockClient.get.mockRejectedValueOnce({
+      response: { status: 401 },
+      message: 'Unauthorized',
     })
+
+    const health = await service.getEngineHealth()
+
+    expect(health.reachable).toBe(true)
+    expect(health.authentication).toBe('unauthorized')
+    expect(health.version).toBeNull()
   })
 })

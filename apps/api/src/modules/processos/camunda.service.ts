@@ -1,6 +1,5 @@
 import axios, { AxiosInstance } from 'axios'
 import { logger } from '../../lib/logger'
-import { AppError } from '../../lib/errors'
 
 interface CamundaConfig {
   baseUrl: string
@@ -17,6 +16,46 @@ interface StartProcessInput {
 interface CamundaVariable {
   value: unknown
   type: 'String' | 'Boolean' | 'Integer' | 'Long' | 'Double' | 'Json'
+}
+
+export interface CamundaVariableInput {
+  value: unknown
+  type: 'String' | 'Boolean' | 'Integer' | 'Long' | 'Double' | 'Json'
+}
+
+interface CamundaDeploymentCreateResponse {
+  id: string
+  name: string
+  deploymentTime: string
+  deployedProcessDefinitions?: Record<string, {
+    id: string
+    key: string
+    name: string
+    version: number
+    deploymentId: string
+    resource: string
+  }>
+}
+
+export interface CamundaDeployResult {
+  deploymentId: string
+  deploymentName: string
+  deploymentTime: string
+  processDefinitionId: string | null
+  processDefinitionKey: string | null
+  processDefinitionVersion: number | null
+  processDefinitionResource: string | null
+}
+
+export interface CamundaHealth {
+  platform: 'camunda7'
+  baseUrl: string
+  restUrl: string
+  reachable: boolean
+  authConfigured: boolean
+  authentication: 'ok' | 'unauthorized' | 'unreachable'
+  version: string | null
+  error: string | null
 }
 
 interface ProcessInstance {
@@ -46,11 +85,18 @@ interface UserTask {
 export class CamundaService {
   private client: AxiosInstance
   private engineName: string
+  private baseUrl: string
+  private authConfigured: boolean
 
   constructor(config: CamundaConfig) {
+    const normalizedBaseUrl = config.baseUrl
+      .replace(/\/+$/, '')
+      .replace(/\/engine-rest$/, '')
+    this.baseUrl = normalizedBaseUrl
+    this.authConfigured = Boolean(config.authToken)
     this.engineName = config.engineName || 'default'
     this.client = axios.create({
-      baseURL: `${config.baseUrl}/engine-rest`,
+      baseURL: `${normalizedBaseUrl}/engine-rest`,
       headers: {
         'Content-Type': 'application/json',
         ...(config.authToken ? { Authorization: `Bearer ${config.authToken}` } : {}),
@@ -79,11 +125,11 @@ export class CamundaService {
   /**
    * Deploy de um arquivo BPMN/DMN
    */
-  async deployProcess(name: string, xmlContent: string, isDmn = false): Promise<{
-    id: string
-    name: string
-    deploymentTime: string
-  }> {
+  async deployProcess(
+    name: string,
+    xmlContent: string,
+    isDmn = false,
+  ): Promise<CamundaDeployResult> {
     const FormData = (await import('form-data')).default
     const form = new FormData()
 
@@ -96,14 +142,52 @@ export class CamundaService {
       { filename: isDmn ? `${name}.dmn` : `${name}.bpmn` },
     )
 
-    const response = await this.client.post('/deployment/create', form, {
+    const response = await this.client.post<CamundaDeploymentCreateResponse>('/deployment/create', form, {
       headers: form.getHeaders(),
     })
 
+    const deployedProcessDefinition = response.data.deployedProcessDefinitions
+      ? Object.values(response.data.deployedProcessDefinitions)[0] ?? null
+      : null
+
     return {
-      id: response.data.id,
-      name: response.data.name,
+      deploymentId: response.data.id,
+      deploymentName: response.data.name,
       deploymentTime: response.data.deploymentTime,
+      processDefinitionId: deployedProcessDefinition?.id ?? null,
+      processDefinitionKey: deployedProcessDefinition?.key ?? null,
+      processDefinitionVersion: deployedProcessDefinition?.version ?? null,
+      processDefinitionResource: deployedProcessDefinition?.resource ?? null,
+    }
+  }
+
+  async getEngineHealth(): Promise<CamundaHealth> {
+    const restUrl = `${this.baseUrl}/engine-rest`
+    try {
+      const response = await this.client.get<{ version?: string }>('/version')
+      return {
+        platform: 'camunda7',
+        baseUrl: this.baseUrl,
+        restUrl,
+        reachable: true,
+        authConfigured: this.authConfigured,
+        authentication: 'ok',
+        version: response.data?.version ?? null,
+        error: null,
+      }
+    } catch (err: any) {
+      const status = err?.response?.status
+      const unauthorized = status === 401 || status === 403
+      return {
+        platform: 'camunda7',
+        baseUrl: this.baseUrl,
+        restUrl,
+        reachable: unauthorized,
+        authConfigured: this.authConfigured,
+        authentication: unauthorized ? 'unauthorized' : 'unreachable',
+        version: null,
+        error: err?.message ?? 'Falha ao conectar no Camunda',
+      }
     }
   }
 
@@ -130,6 +214,13 @@ export class CamundaService {
     return response.data
   }
 
+  async listProcessInstances(processDefinitionKey?: string): Promise<ProcessInstance[]> {
+    const response = await this.client.get('/process-instance', {
+      params: processDefinitionKey ? { processDefinitionKey } : {},
+    })
+    return response.data
+  }
+
   /**
    * Lista tarefas do usuário por grupos
    */
@@ -152,6 +243,20 @@ export class CamundaService {
    */
   async getTask(taskId: string): Promise<UserTask> {
     const response = await this.client.get(`/task/${taskId}`)
+    return response.data
+  }
+
+  async listTasks(filters?: {
+    processInstanceId?: string
+    processDefinitionKey?: string
+    activeOnly?: boolean
+  }): Promise<UserTask[]> {
+    const params: Record<string, string | boolean> = {}
+    if (filters?.processInstanceId) params.processInstanceId = filters.processInstanceId
+    if (filters?.processDefinitionKey) params.processDefinitionKey = filters.processDefinitionKey
+    if (filters?.activeOnly) params.active = true
+
+    const response = await this.client.get('/task', { params })
     return response.data
   }
 

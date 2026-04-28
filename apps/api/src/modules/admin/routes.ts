@@ -95,12 +95,20 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!fluxo) return reply.status(404).send({ error: 'Fluxo não encontrado' })
 
     const deploy = await camundaService.deployProcess(fluxo.nome, fluxo.bpmnXml)
+    const processDefinitionKey = deploy.processDefinitionKey ?? fluxo.camundaKey
+    const processDefinitionVersion = deploy.processDefinitionVersion ?? fluxo.camundaVersion ?? 1
+
+    if (!processDefinitionKey) {
+      return reply.status(502).send({
+        error: 'Deploy sem processDefinitionKey retornada pelo Camunda',
+      })
+    }
 
     await prisma.fluxoProcesso.update({
       where: { id: fluxo.id },
       data: {
-        camundaKey: deploy.id,
-        camundaVersion: 1,
+        camundaKey: processDefinitionKey,
+        camundaVersion: processDefinitionVersion,
         status: 'ATIVO',
         publicadoEm: new Date(),
       },
